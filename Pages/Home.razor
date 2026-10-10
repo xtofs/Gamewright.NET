@@ -1,0 +1,20 @@
+@page "/"
+@using ImmediateCanvas.Gfx
+@implements IDisposable
+
+<PageTitle>Immediate Canvas</PageTitle>
+
+@* Blazor renders this once; after that the JS frame loop drives everything. *@
+<canvas id="surface"></canvas>
+
+@code {
+    readonly Renderer _renderer = new(new HelloApp());
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await _renderer.StartAsync("surface");
+    }
+
+    public void Dispose() => _renderer.Stop();
+}
