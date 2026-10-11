@@ -13,7 +13,7 @@ public interface IImmediateApp
 public sealed class Renderer
 {
     readonly IImmediateApp _app;
-    readonly Canvas2D _draw = new();
+    readonly Canvas2D _canvas = new();
     readonly float[] _input = new float[Input.Length];
     readonly Action<double> _frame;   // one delegate instance, kept alive for JS
     bool _started;
@@ -24,6 +24,7 @@ public sealed class Renderer
         _frame = Frame;
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     public async Task StartAsync(string canvasId)
     {
         await JSHost.ImportAsync(CanvasInterop.Module, CanvasInterop.ModulePath);
@@ -42,13 +43,13 @@ public sealed class Renderer
         CanvasInterop.ReadInput(MemoryMarshal.AsBytes(_input.AsSpan()));
         var input = Input.From(_input);
 
-        _draw.Reset();
-        _app.Frame(timeMs, input, _draw);
+        _canvas.Reset();
+        _app.Frame(timeMs, input, _canvas);
 
-        foreach (var (id, value) in _draw.NewStrings)
+        foreach (var (id, value) in _canvas.NewStrings)
             CanvasInterop.DefineString(id, value);
-        _draw.NewStrings.Clear();
+        _canvas.NewStrings.Clear();
 
-        CanvasInterop.Submit(MemoryMarshal.AsBytes(_draw.Commands));
+        CanvasInterop.Submit(MemoryMarshal.AsBytes(_canvas.Commands));
     }
 }

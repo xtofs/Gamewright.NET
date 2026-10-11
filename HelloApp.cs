@@ -7,45 +7,39 @@ namespace ImmediateCanvas;
 /// </summary>
 public sealed class HelloApp : IImmediateApp
 {
-    int _clicks;
-    string _label = "Click me";   // rebuilt only when _clicks changes (no per-frame allocation)
+    // int _clicks;
+    // readonly string _label = "Click me";   // rebuilt only when _clicks changes (no per-frame allocation)
 
-    public void Frame(double timeMs, in Input io, Canvas2D d)
+    public void Frame(double timeMs, in Input io, Canvas2D canvas)
     {
-        var (cx, cy) = io.Size / 2;
+        canvas.Clear(new Color(0x14181EFF));
+        var board = DrawBoardCentered(new Rect(Point.Zero, io.Size), canvas);
 
-        d.Clear(new Color(0x14181EFF));
-        d.Text("Hello, world!", cx, cy - 40, 48, new Color(0xF2F2F2FF));
+        // Pointer follower.
+        var pos = new Point(io.X, io.Y);
+        pos = pos.Clamp(board);
+        canvas.Circle(pos.X, pos.Y, 5, new Color(0x4FC3F7FF));
+    }
 
-        // Something that obviously animates: a dot orbiting the text.
-        float a = (float)(timeMs / 1000.0);
-        d.Circle(cx + MathF.Cos(a) * 180f, cy - 40 + MathF.Sin(a) * 90f, 8, new Color(0xFFB000FF));
+    private static Rect DrawBoardCentered(Rect rect, Canvas2D d)
+    {
+        var center = rect.Center;
+        var perimeter = Rect.FromCenter(center, Size.Square(MathF.Min(rect.Width, rect.Height) * 0.8f));
 
-        if (Button(io, d, cx - 90, cy + 30, 180, 44, _label))
-        {
-            _clicks++;
-            _label = $"Clicked {_clicks}×";
-        }
-
-        var center = new Point(io.Size.Width / 2f, io.Size.Height / 2f);
-
-        var checkers = Rect.FromCenter(center, Size.Square(MathF.Min(io.Width, io.Height) * 0.8f));
-
-        var (ox, oy) = checkers.TopLeft; // offset
-        var (dx, dy) = checkers.Size / 8f;    // delta
+        var (ox, oy) = perimeter.TopLeft; // offset
+        var (dx, dy) = perimeter.Size / 8f;    // delta
 
         for (var i = 0; i < 8; i++)
         {
             for (int j = 0; j < 8; j++)
             {
                 var r = new Rect(ox + i * dx, oy + j * dy, dx, dy);
-                d.StrokeRect(r.X, r.Y, r.Width, r.Height, 1, new Color(0xFFB000FF));
+                var color = (i + j) % 2 == 0 ? Colors.DarkGray : Colors.LightGray;
+                d.Rect(r.Left, r.Top, r.Width, r.Height, color);
+                d.StrokeRect(r.Left, r.Top, r.Width, r.Height, 1, Colors.DarkSlateBlue);
             }
         }
-
-
-        // Pointer follower.
-        d.Circle(io.X, io.Y, 5, new Color(0x4FC3F7FF));
+        return perimeter;
     }
 
     /// <summary>Classic immediate-mode widget: draws itself and returns true on click.</summary>
