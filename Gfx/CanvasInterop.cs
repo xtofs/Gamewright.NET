@@ -20,11 +20,13 @@ internal static partial class CanvasInterop
     [JSImport("stop", Module)]
     public static partial void Stop();
 
+    // MemoryView only supports Span<byte|int|double>. Float data crosses as bytes
+    // (MemoryMarshal.AsBytes at the call site) and JS re-views it as Float32Array/Uint32Array.
     [JSImport("readInput", Module)]
-    public static partial void ReadInput([JSMarshalAs<JSType.MemoryView>] Span<double> destination);
+    public static partial void ReadInput([JSMarshalAs<JSType.MemoryView>] Span<byte> destination);
 
     [JSImport("submit", Module)]
-    public static partial void Submit([JSMarshalAs<JSType.MemoryView>] Span<double> commands);
+    public static partial void Submit([JSMarshalAs<JSType.MemoryView>] Span<byte> commands);
 
     [JSImport("defineString", Module)]
     public static partial void DefineString(int id, string value);

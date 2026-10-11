@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 
 namespace ImmediateCanvas.Gfx;
@@ -5,15 +6,15 @@ namespace ImmediateCanvas.Gfx;
 public interface IImmediateApp
 {
     /// <summary>Called once per animation frame. Draw everything, every frame.</summary>
-    void Frame(double timeMs, in Input input, DrawList draw);
+    void Frame(double timeMs, in Input input, Canvas2D draw);
 }
 
 /// <summary>Owns the frame callback: input in, commands out, nothing retained in JS.</summary>
 public sealed class Renderer
 {
     readonly IImmediateApp _app;
-    readonly DrawList _draw = new();
-    readonly double[] _input = new double[Input.Length];
+    readonly Canvas2D _draw = new();
+    readonly float[] _input = new float[Input.Length];
     readonly Action<double> _frame;   // one delegate instance, kept alive for JS
     bool _started;
 
@@ -38,7 +39,7 @@ public sealed class Renderer
 
     void Frame(double timeMs)
     {
-        CanvasInterop.ReadInput(_input);
+        CanvasInterop.ReadInput(MemoryMarshal.AsBytes(_input.AsSpan()));
         var input = Input.From(_input);
 
         _draw.Reset();
@@ -48,6 +49,6 @@ public sealed class Renderer
             CanvasInterop.DefineString(id, value);
         _draw.NewStrings.Clear();
 
-        CanvasInterop.Submit(_draw.Commands);
+        CanvasInterop.Submit(MemoryMarshal.AsBytes(_draw.Commands));
     }
 }
