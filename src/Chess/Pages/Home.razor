@@ -1,5 +1,5 @@
 @page "/"
-@using ImmediateCanvas.Gfx
+@using Gamewright
 @implements IDisposable
 
 <PageTitle>Immediate Canvas</PageTitle>
@@ -8,7 +8,7 @@
 <canvas id="surface"></canvas>
 
 @code {
-    readonly Renderer _renderer = new(new HelloApp());
+    readonly Renderer _renderer = new Renderer(new HelloApp());
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

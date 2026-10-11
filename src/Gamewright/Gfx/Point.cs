@@ -1,4 +1,4 @@
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 public record struct Point(float X, float Y)
 {

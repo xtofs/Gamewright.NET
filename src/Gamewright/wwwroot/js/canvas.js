@@ -89,7 +89,7 @@ function css(v) {
   return `rgba(${v >>> 24},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
 }
 
-// Opcodes must match DrawList.cs.
+// Opcodes must match Canvas2D.cs.
 export function submit(view) {
   const bytes = view.slice(); // copy out of WASM memory (view dies after this call)
   const c = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4); // opcodes, numbers

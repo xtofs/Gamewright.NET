@@ -1,51 +1,60 @@
-# ImmediateCanvas
+# Gamewright.NET
 
-Hello-world for an immediate-mode 2D app in Blazor WebAssembly (.NET 10):
-JS runs the `requestAnimationFrame` loop and owns the `<canvas>`; .NET owns all
-state and emits a command buffer every frame.
+An immediate-mode 2D app in Blazor WebAssembly (.NET 10):
+JavaScript runs the `requestAnimationFrame` loop and owns the `<canvas>`; .NET
+owns all application state and emits a command buffer every frame.
 
 ## Run
 
 ```sh
-dotnet run
+dotnet run --project src/Chess/Chess.csproj
 ```
 
-Open the URL it prints. You should see "Hello, world!", an orbiting dot, a
-pointer follower, and a button that counts clicks.
+Open the URL it prints. The sample draws a checkers board and a pointer follower.
 
 ## Per-frame flow
 
 ```plain
 rAF tick (JS)
-  └─ frame(t)                     JS → .NET   [JSImport'd Action<double>]
-       ├─ ReadInput(Span<byte>)  .NET → JS   copy 8-slot float32 input block
-       ├─ app.Frame(t, input, draw)           pure C#, no interop
+  └─ frame(t)                    JS → .NET   [JSImport'd Action<float>]
+       ├─ ReadInput(Span<byte>)   .NET → JS   copy 8-slot float32 input block
+       ├─ app.Frame(input, draw)              pure C#, no interop
        ├─ DefineString(id, s)     .NET → JS   only for strings never seen before
-       └─ Submit(Span<byte>)     .NET → JS   one call, JS replays onto 2D context
+       └─ Submit(Span<byte>)      .NET → JS   one call, JS replays onto 2D context
 ```
 
-## Files
+## Projects and files
 
-| File                   | Role                                                             |
-| ---------------------- | ---------------------------------------------------------------- |
-| `wwwroot/js/canvas.js` | rAF loop, input capture, DPR-aware resize, command replay        |
-| `Gfx/CanvasInterop.cs` | `[JSImport]` bindings (generated marshalling, not `IJSRuntime`)  |
-| `Gfx/DrawList.cs`      | Command buffer + string interning; opcodes mirror `canvas.js`    |
-| `Gfx/Input.cs`         | Per-frame input snapshot (PointerEvent `buttons` bit convention) |
-| `Gfx/Renderer.cs`      | Frame callback: input in → app → commands out                    |
-| `HelloApp.cs`          | The app: state + `Frame()` + an IMGUI-style `Button()`           |
-| `Pages/Home.razor`     | Renders the canvas once and starts the renderer                  |
+| Path | Role |
+| --- | --- |
+| `src/Gamewright/` | Reusable graphics and browser-rendering Razor Class Library |
+| `src/Gamewright/Gfx/` | `Renderer`, `Canvas`, `Input`, `IImmediateApp`, geometry, and color types |
+| `src/Gamewright/Gfx/CanvasInterop.cs` | `[JSImport]` bindings using generated marshalling, not `IJSRuntime` |
+| `src/Gamewright/wwwroot/js/canvas.js` | rAF loop, input capture, DPR-aware resize, and command replay |
+| `src/Chess/` | Blazor WebAssembly host application and sample |
+| `src/Chess/HelloApp.cs` | Sample app: state plus `Frame()` |
+| `src/Chess/Pages/Home.razor` | Renders the canvas and starts/stops the renderer |
+
+The application references the library using a project reference. The library's
+JavaScript is delivered as a static web asset at
+`_content/Gamewright/js/canvas.js`; the renderer imports this module
+when `StartAsync` runs.
 
 ## Notes
 
 - Coordinates are CSS pixels; `canvas.js` applies the device-pixel-ratio transform.
-- The command buffer is `float[]`, but JSImport `MemoryView` only supports `Span<byte|int|double>`, so it
-  crosses the boundary as bytes (`MemoryMarshal.AsBytes`) and JS re-views it as `Float32Array`/`Uint32Array`.
-- Colors (`0xRRGGBBAA`) are stored as raw `uint` bits, never converted to `float` (the 24-bit mantissa would
-  corrupt them). JS reads them through the `Uint32Array` view.
-- Frame timestamps stay `double`: a `float` timestamp visibly loses precision once the page has been open for hours.
-- `Span` views are only valid for the duration of the call; `submit` copies with `slice()`.
-- Adding a primitive = new opcode in `DrawList.cs` + matching `case` in `canvas.js`.
-- Avoid per-frame allocations (new strings, lambdas, `new SKPaint`-style objects): the WASM GC
-  is not concurrent and stutters. For heavy frame logic, add `<RunAOTCompilation>true</RunAOTCompilation>`
-  (needs the `wasm-tools` workload).
+- The command buffer is `float[]`, but the generated JavaScript interop `MemoryView`
+  supports `Span<byte|int|double>`, so it crosses the boundary as bytes and JS
+  re-views it as `Float32Array`/`Uint32Array`.
+- Colors (`0xRRGGBBAA`) are stored as raw `uint` bits, never converted to `float`
+  (the 24-bit mantissa would corrupt them). JS reads them through the `Uint32Array` view.
+- Frame timestamps stay `double` in the browser callback; the renderer's frame
+  callback currently receives a `float`.
+- `Span` views are only valid for the duration of the interop call; `submit`
+  copies with `slice()`.
+- Adding a primitive requires a new opcode in
+  `src/Gamewright/Gfx/Canvas2D.cs` and a matching case in
+  `src/Gamewright/wwwroot/js/canvas.js`.
+- Avoid per-frame allocations (new strings, lambdas, `new SKPaint`-style objects):
+  the WASM GC is not concurrent and stutters. For heavy frame logic, enable
+  `<RunAOTCompilation>true</RunAOTCompilation>` (requires the `wasm-tools` workload).

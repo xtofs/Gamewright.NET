@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Gamewright/Gamewright.csproj" />
+  </ItemGroup>
+
 </Project>

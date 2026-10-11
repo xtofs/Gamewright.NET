@@ -1,4 +1,4 @@
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 /// <summary>Snapshot of input for one frame. Layout mirrors the Float32Array in canvas.js.</summary>
 public readonly record struct Input(

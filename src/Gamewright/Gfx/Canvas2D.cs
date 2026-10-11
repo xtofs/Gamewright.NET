@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 /// <summary>
 /// Per-frame command buffer of 32-bit slots. Numbers are stored as float; colors (0xRRGGBBAA)

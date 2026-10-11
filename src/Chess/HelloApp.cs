@@ -1,6 +1,6 @@
-using ImmediateCanvas.Gfx;
+using Gamewright;
 
-namespace ImmediateCanvas;
+namespace Chess;
 
 /// <summary>
 /// The application: plain state plus a Frame method. No components, no StateHasChanged.

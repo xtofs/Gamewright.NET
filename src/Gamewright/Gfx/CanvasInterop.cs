@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices.JavaScript;
 
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 /// <summary>
 /// [JSImport] bindings to wwwroot/js/canvas.js. Generated marshalling, no IJSRuntime.
@@ -10,7 +10,7 @@ namespace ImmediateCanvas.Gfx;
 internal static partial class CanvasInterop
 {
     public const string Module = "canvas";
-    public const string ModulePath = "../js/canvas.js"; // relative to _framework/
+    public const string ModulePath = "../_content/Gamewright/js/canvas.js"; // relative to _framework/
 
     [JSImport("init", Module)]
     public static partial void Init(

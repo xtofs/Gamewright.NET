@@ -1,6 +1,6 @@
-using ImmediateCanvas.Gfx;
+using Gamewright;
 
-namespace ImmediateCanvas;
+namespace Chess;
 
 internal class CheckersBoard(int cols, int rows)
 {

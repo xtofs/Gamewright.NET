@@ -1,4 +1,4 @@
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 public interface IImmediateApp
 {

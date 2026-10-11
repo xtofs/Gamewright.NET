@@ -1,4 +1,4 @@
-namespace ImmediateCanvas.Gfx;
+namespace Gamewright;
 
 public readonly record struct Rect(float Left, float Top, float Width, float Height)
 {

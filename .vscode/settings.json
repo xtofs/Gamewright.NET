@@ -1,5 +1,8 @@
 {
     "cSpell.words": [
+        "Blazor",
+        "Gamewright",
         "RGBD"
-    ]
+    ],
+    "dotnet.defaultSolution": "gamewright.slnx"
 }
