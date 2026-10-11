@@ -20,9 +20,8 @@ internal class CheckersBoard(int cols, int rows)
             for (int j = 0; j < _rows; j++)
             {
                 var r = new Rect(ox + i * dx, oy + j * dy, dx, dy);
-                var color = (i + j) % 2 == 0 ? Colors.DarkGray : Colors.LightGray;
+                var color = (i + j) % 2 == 0 ? Colors.LightGray : Colors.DarkGray;
                 canvas.Rect(r.Left, r.Top, r.Width, r.Height, color);
-                // canvas.StrokeRect(r.Left, r.Top, r.Width, r.Height, 1, Colors.DarkSlateBlue);
             }
         }
 
@@ -52,12 +51,27 @@ internal class CheckersBoard(int cols, int rows)
             var (col, row) = hl;
             canvas.Rect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
         }
-        // // var (ox, oy) = (board.Left, board.Top);
-        // // var (dx, dy) = (board.Width / 8, board.Height / 8);
-        // canvas.Rect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
-
         return board;
     }
 
+    public void DrawPieces(Canvas canvas, Input io, Rect board, SpriteSheet pieces, (int, int)?[,] state)
+    {
+        var (ox, oy) = board.TopLeft;
+        var (dx, dy) = board.Size / 8f;
 
+        // Console.WriteLine($"Drawing pieces for board state with dimensions: {state.GetLength(0)}x{state.GetLength(1)}");
+        for (int col = 0; col <= state.GetUpperBound(0); col++)
+        {
+            for (int row = 0; row <= state.GetUpperBound(1); row++)
+            {
+                if (state[row, col] is { } ix)
+                {
+                    var sprite = pieces[ix.Item2, ix.Item1];
+                    var rect = new Rect(ox + col * dx, oy + row * dy, dx, dy);
+                    // Console.WriteLine($"drawing {ix} at {rect}");
+                    canvas.DrawSprite(sprite, rect);
+                }
+            }
+        }
+    }
 }

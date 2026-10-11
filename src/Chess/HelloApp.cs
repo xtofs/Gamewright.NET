@@ -3,7 +3,7 @@ using Gamewright;
 namespace Chess;
 
 /// <summary>
-/// The application: plain state plus a Frame method. No components, no StateHasChanged.
+/// The application: plain state plus a Frame method. No components,  no StateHasChanged.
 /// </summary>
 public sealed class HelloApp : IImmediateApp
 {
@@ -44,7 +44,8 @@ public sealed class HelloApp : IImmediateApp
         }
 
         _pieces ??= new SpriteSheet(canvas.LoadImage("img/pieces_atlas.png"), Size.Square(250));
-        DrawPieces(canvas, _pieces.Value, outline);
+
+        _board.DrawPieces(canvas, io, outline, _pieces.Value, _state);
 
         // Pointer follower.
         var pos = new Point(io.X, io.Y);
@@ -52,22 +53,14 @@ public sealed class HelloApp : IImmediateApp
         canvas.Circle(pos.X, pos.Y, 5, new Color(0x4FC3F7FF));
     }
 
-    /// <summary>Standard starting position, black on top. Draws nothing until the atlas has loaded.</summary>
-    private static void DrawPieces(Canvas canvas, SpriteSheet pieces, Rect board)
-    {
-        var (dx, dy) = board.Size / 8f;
-
-        void Put(int col, int row, Piece piece, int atlasRow) =>
-            canvas.DrawSprite(
-                pieces[(int)piece, atlasRow],
-                new Rect(board.Left + col * dx, board.Top + row * dy, dx, dy));
-
-        for (var col = 0; col < 8; col++)
-        {
-            Put(col, 0, BackRank[col], atlasRow: 1);   // black
-            Put(col, 1, Piece.Pawn, atlasRow: 1);
-            Put(col, 6, Piece.Pawn, atlasRow: 0);      // white
-            Put(col, 7, BackRank[col], atlasRow: 0);
-        }
-    }
+    private readonly (int, int)?[,] _state = new (int, int)?[,]{
+        {(1,2), (1,4), (1,3), (1,1), (1,0), (1,3), (1,4), (1,2)},
+        {(1,5), (1,5), (1,5), (1,5), (1,5), (1,5), (1,5), (1,5)},
+        {null,  null,  null,  null,  null,  null,  null,  null },
+        {null,  null,  null,  null,  null,  null,  null,  null },
+        {null,  null,  null,  null,  null,  null,  null,  null },
+        {null,  null,  null,  null,  null,  null,  null,  null },
+        {(0,5), (0,5), (0,5), (0,5), (0,5), (0,5), (0,5), (0,5)},
+        {(0,2), (0,4), (0,3), (0,1), (0,0), (0,3), (0,4), (0,2)},
+    };
 }
