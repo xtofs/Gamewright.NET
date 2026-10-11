@@ -15,7 +15,7 @@ internal static partial class CanvasInterop
     [JSImport("init", Module)]
     public static partial void Init(
         string canvasId,
-        [JSMarshalAs<JSType.Function<JSType.Number>>] Action<double> frame);
+        [JSMarshalAs<JSType.Function<JSType.Number>>] Action<float> frame);
 
     [JSImport("stop", Module)]
     public static partial void Stop();

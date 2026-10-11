@@ -3,19 +3,13 @@ using System.Runtime.InteropServices.JavaScript;
 
 namespace ImmediateCanvas.Gfx;
 
-public interface IImmediateApp
-{
-    /// <summary>Called once per animation frame. Draw everything, every frame.</summary>
-    void Frame(double timeMs, in Input input, Canvas2D draw);
-}
-
 /// <summary>Owns the frame callback: input in, commands out, nothing retained in JS.</summary>
 public sealed class Renderer
 {
     readonly IImmediateApp _app;
-    readonly Canvas2D _canvas = new();
+    readonly Canvas _canvas = new();
     readonly float[] _input = new float[Input.Length];
-    readonly Action<double> _frame;   // one delegate instance, kept alive for JS
+    readonly Action<float> _frame;   // one delegate instance, kept alive for JS
     bool _started;
 
     public Renderer(IImmediateApp app)
@@ -38,13 +32,13 @@ public sealed class Renderer
         _started = false;
     }
 
-    void Frame(double timeMs)
+    void Frame(float timeMs)
     {
         CanvasInterop.ReadInput(MemoryMarshal.AsBytes(_input.AsSpan()));
-        var input = Input.From(_input);
+        var input = Input.From(timeMs, _input);
 
         _canvas.Reset();
-        _app.Frame(timeMs, input, _canvas);
+        _app.Frame(input, _canvas);
 
         foreach (var (id, value) in _canvas.NewStrings)
             CanvasInterop.DefineString(id, value);

@@ -8,7 +8,7 @@ namespace ImmediateCanvas.Gfx;
 /// supports Span&lt;byte|int|double&gt;, so the buffer crosses the boundary as bytes (see Renderer).
 /// Opcodes must match the switch in canvas.js.
 /// </summary>
-public sealed class Canvas2D
+public sealed class Canvas
 {
     const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4;
 
