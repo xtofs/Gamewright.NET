@@ -10,10 +10,10 @@ internal class CheckersBoard(int cols, int rows)
     public Rect Draw(Canvas canvas, Input io, Rect rect, (int col, int row)? highlight, out (int col, int row)? clicked)
     {
         var center = rect.Center;
-        var board = Rect.FromCenter(center, Size.Square(MathF.Min(rect.Width, rect.Height) * 0.8f));
+        var board = Rect.FromCenter(center, Size.Square(MathF.Min(rect.Width, rect.Height) * 0.95f));
 
-        var (ox, oy) = board.TopLeft; // offset
-        var (dx, dy) = board.Size / 8f;    // delta
+        var (ox, oy) = board.TopLeft;       // offset
+        var (dx, dy) = board.Size / 8f;     // delta
 
         for (var i = 0; i < _cols; i++)
         {
@@ -22,8 +22,19 @@ internal class CheckersBoard(int cols, int rows)
                 var r = new Rect(ox + i * dx, oy + j * dy, dx, dy);
                 var color = (i + j) % 2 == 0 ? Colors.DarkGray : Colors.LightGray;
                 canvas.Rect(r.Left, r.Top, r.Width, r.Height, color);
-                canvas.StrokeRect(r.Left, r.Top, r.Width, r.Height, 1, Colors.DarkSlateBlue);
+                // canvas.StrokeRect(r.Left, r.Top, r.Width, r.Height, 1, Colors.DarkSlateBlue);
             }
+        }
+
+        for (int i = 0; i <= _rows; i++)
+        {
+            var y = oy + i * dy;
+            canvas.Line(board.Left, y, board.Right, y, 1.0f, Colors.Black);
+        }
+        for (int j = 0; j <= _cols; j++)
+        {
+            var x = ox + j * dx;
+            canvas.Line(x, board.Top, x, board.Bottom, 1.0f, Colors.Black);
         }
 
         if (io.Inside(board) && io.PrimaryDown)
@@ -35,7 +46,6 @@ internal class CheckersBoard(int cols, int rows)
         {
             clicked = null;
         }
-
 
         if (highlight is { } hl)
         {

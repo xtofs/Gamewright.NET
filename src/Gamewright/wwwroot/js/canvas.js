@@ -16,10 +16,15 @@ const inputBytes = new Uint8Array(input.buffer); // the MemoryView from .NET is 
 
 const strings = []; // string table, filled lazily via defineString
 
-export function init(canvasId, frame) {
+const images = []; // id -> ImageBitmap, filled by loadImage
+const loading = new Set(); // ids whose load is still in flight
+let imageLoadedCb; // .NET callback (id, width, height); width 0 means the load failed
+
+export function init(canvasId, frame, imageLoaded) {
   canvas = document.getElementById(canvasId);
   ctx = canvas.getContext("2d");
   frameCb = frame;
+  imageLoadedCb = imageLoaded;
 
   canvas.addEventListener("pointermove", (e) => {
     input[3] = e.offsetX;
@@ -52,6 +57,31 @@ export function stop() {
 
 export function defineString(id, value) {
   strings[id] = value;
+}
+
+// Fetch + decode off the main thread; the bitmap draws fast and is released by freeImage.
+export async function loadImage(id, url) {
+  loading.add(id);
+  let bitmap;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    bitmap = await createImageBitmap(await response.blob());
+  } catch (e) {
+    console.warn(`Gamewright: could not load image '${url}':`, e);
+  }
+  if (!loading.delete(id)) {
+    bitmap?.close(); // freed while it was still loading
+    return;
+  }
+  images[id] = bitmap;
+  imageLoadedCb(id, bitmap ? bitmap.width : 0, bitmap ? bitmap.height : 0);
+}
+
+export function freeImage(id) {
+  loading.delete(id);
+  images[id]?.close();
+  images[id] = undefined;
 }
 
 // Called from .NET inside the frame callback. The view is only valid during the call.
@@ -92,8 +122,16 @@ function css(v) {
 // Opcodes must match Canvas2D.cs.
 export function submit(view) {
   const bytes = view.slice(); // copy out of WASM memory (view dies after this call)
-  const c = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4); // opcodes, numbers
-  const u = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4); // colors (raw bits)
+  const c = new Float32Array(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength / 4,
+  ); // opcodes, numbers
+  const u = new Uint32Array(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength / 4,
+  ); // colors (raw bits)
   let i = 0;
   while (i < c.length) {
     switch (c[i++]) {
@@ -148,8 +186,47 @@ export function submit(view) {
         ctx.strokeRect(x, y, w, h);
         break;
       }
+      case 5: {
+        // Line x1, y1, x2, y2 lineWidth rgba
+        const x1 = c[i++],
+          y1 = c[i++],
+          x2 = c[i++],
+          y2 = c[i++];
+        ctx.lineWidth = c[i++];
+        ctx.strokeStyle = css(u[i++]);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1); // move to the starting point
+        ctx.lineTo(x2, y2); // draw a line to the end point
+        ctx.stroke();
+        break;
+      }
+      case 6: {
+        // Image id sx sy sw sh dx dy dw dh alpha flags (flags bit 0 = pixelated)
+        const bitmap = images[c[i++]],
+          sx = c[i++],
+          sy = c[i++],
+          sw = c[i++],
+          sh = c[i++],
+          dx = c[i++],
+          dy = c[i++],
+          dw = c[i++],
+          dh = c[i++],
+          alpha = c[i++],
+          flags = c[i++];
+        // All operands are consumed above even if the bitmap is gone, so the stream never desyncs.
+        if (bitmap) {
+          ctx.globalAlpha = alpha;
+          ctx.imageSmoothingEnabled = (flags & 1) === 0;
+          ctx.drawImage(bitmap, sx, sy, sw, sh, dx, dy, dw, dh);
+          ctx.globalAlpha = 1;
+          ctx.imageSmoothingEnabled = true;
+        }
+        break;
+      }
       default:
-        throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
+        console.log(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
+      // throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
     }
   }
 }

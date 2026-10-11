@@ -20,6 +20,7 @@ rAF tick (JS)
        ├─ ReadInput(Span<byte>)   .NET → JS   copy 8-slot float32 input block
        ├─ app.Frame(input, draw)              pure C#, no interop
        ├─ DefineString(id, s)     .NET → JS   only for strings never seen before
+       ├─ LoadImage(id, url)      .NET → JS   only when an image is created (FreeImage: disposed)
        └─ Submit(Span<byte>)      .NET → JS   one call, JS replays onto 2D context
 ```
 
@@ -28,7 +29,7 @@ rAF tick (JS)
 | Path | Role |
 | --- | --- |
 | `src/Gamewright/` | Reusable graphics and browser-rendering Razor Class Library |
-| `src/Gamewright/Gfx/` | `Renderer`, `Canvas`, `Input`, `IImmediateApp`, geometry, and color types |
+| `src/Gamewright/Gfx/` | `Renderer`, `Canvas`, `Input`, `IImmediateApp`, `Image`/`Sprite`/`SpriteSheet`, geometry, and color types |
 | `src/Gamewright/Gfx/CanvasInterop.cs` | `[JSImport]` bindings using generated marshalling, not `IJSRuntime` |
 | `src/Gamewright/wwwroot/js/canvas.js` | rAF loop, input capture, DPR-aware resize, and command replay |
 | `src/Chess/` | Blazor WebAssembly host application and sample |
@@ -53,8 +54,13 @@ when `StartAsync` runs.
 - `Span` views are only valid for the duration of the interop call; `submit`
   copies with `slice()`.
 - Adding a primitive requires a new opcode in
-  `src/Gamewright/Gfx/Canvas2D.cs` and a matching case in
+  `src/Gamewright/Gfx/Canvas.cs` and a matching case in
   `src/Gamewright/wwwroot/js/canvas.js`.
+- Images are retained resources behind immediate-mode draw calls. `canvas.LoadImage(url)` returns an
+  `Image` handle immediately and loads it asynchronously in the browser (`createImageBitmap`).
+  `DrawImage`/`DrawSprite` calls are skipped until `image.IsReady`; after that they carry only the handle id
+  and rectangles (opcode 6). Keep the handle (`_atlas ??= canvas.LoadImage(...)`) and `Dispose` it to free
+  the bitmap. `SpriteSheet` addresses a regular grid of cells as `sheet[column, row]`.
 - Avoid per-frame allocations (new strings, lambdas, `new SKPaint`-style objects):
   the WASM GC is not concurrent and stutters. For heavy frame logic, enable
   `<RunAOTCompilation>true</RunAOTCompilation>` (requires the `wasm-tools` workload).
