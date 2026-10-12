@@ -13,25 +13,40 @@ public sealed class ChessApp : IImmediateApp
 
     private readonly ChessGame _chessGame = new ChessGame();
 
-    private (int col, int row)? _selected;
+    // UI state: selected square on the board
+    private (int col, int row)? _selectedSquare;
 
     public void LoadResources(ResourceLoader resources)
     {
-        _pieces = new SpriteAtlas<ChessPiece>(resources.LoadImage("img/pieces_atlas.png"), Size.Square(250), PieceIndex);
+        _pieces = new SpriteAtlas<ChessPiece>(resources.LoadImage("img/pieces_atlas.png"), Size.Square(250), CoordFromPiece);
     }
 
     public void RenderFrame(float timeMs, in Input io, Canvas canvas)
     {
         canvas.Clear(new Color(0x14181EFF));
 
-        var outline = _checkersBoard.Draw(canvas, io, io.Rect, _selected, out var clicked);
+        var outline = _checkersBoard.Draw(canvas, io, io.Rect, _selectedSquare, out var clicked);
 
-        if (clicked is { } c)
+        if (clicked is { } click)
         {
-            _selected = c;
+            Console.WriteLine($"clicked {click} selected {_selectedSquare}");
+            if (_selectedSquare is { } sel)
+            {
+                if (_chessGame[sel] != null && click != sel)
+                {
+                    Console.WriteLine($"moving {sel} to {click}");
+                    _chessGame.Move(sel, click);
+                    Console.WriteLine($"moved {_chessGame[sel]} to {_chessGame[click]}");
+                }
+                _selectedSquare = null;
+            }
+            else
+            {
+                _selectedSquare = click;
+            }
         }
 
-        _checkersBoard.DrawPieces(canvas, io, outline, _pieces, new Func<int, int, ChessPiece?>((col, row) => _chessGame[col, row]));
+        _checkersBoard.DrawPieces(canvas, io, outline, _pieces, new Func<(int col, int row), ChessPiece?>(sq => _chessGame[sq]));
 
         // Pointer follower.
         var pos = new Point(io.X, io.Y);
@@ -40,7 +55,7 @@ public sealed class ChessApp : IImmediateApp
     }
 
 
-    private static (int, int) PieceIndex(ChessPiece key)
+    private static (int col, int row) CoordFromPiece(ChessPiece key)
     {
         return key switch
         {

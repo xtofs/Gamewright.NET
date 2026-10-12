@@ -15,28 +15,28 @@ internal class CheckersBoard(int cols, int rows)
         var (ox, oy) = board.TopLeft;       // offset
         var (dx, dy) = board.Size / 8f;     // delta
 
-        for (var i = 0; i < _cols; i++)
+        for (var col = 0; col < _cols; col++)
         {
-            for (int j = 0; j < _rows; j++)
+            for (int row = 0; row < _rows; row++)
             {
-                var r = new Rect(ox + i * dx, oy + j * dy, dx, dy);
-                var color = (i + j) % 2 == 0 ? Colors.LightGray : Colors.DarkGray;
+                var r = new Rect(ox + col * dx, oy + row * dy, dx, dy);
+                var color = (col + row) % 2 == 0 ? Colors.LightGray : Colors.DarkGray;
                 canvas.Rect(r.Left, r.Top, r.Width, r.Height, color);
             }
         }
 
-        for (int i = 0; i <= _rows; i++)
+        for (int row = 0; row <= _rows; row++)
         {
-            var y = oy + i * dy;
+            var y = oy + row * dy;
             canvas.Line(board.Left, y, board.Right, y, 1.0f, Colors.Black);
         }
-        for (int j = 0; j <= _cols; j++)
+        for (int colr = 0; colr <= _cols; colr++)
         {
-            var x = ox + j * dx;
+            var x = ox + colr * dx;
             canvas.Line(x, board.Top, x, board.Bottom, 1.0f, Colors.Black);
         }
 
-        if (io.Inside(board) && io.PrimaryDown)
+        if (io.Inside(board) && io.PrimaryPressed)
         {
             var (col, row) = ((int)((io.X - ox) / dx), (int)((io.Y - oy) / dy));
             clicked = (col, row);
@@ -54,7 +54,7 @@ internal class CheckersBoard(int cols, int rows)
         return board;
     }
 
-    public void DrawPieces<Piece>(Canvas canvas, Input io, Rect board, SpriteAtlas<Piece> pieces, Func<int, int, Piece?> selector)
+    public void DrawPieces<Piece>(Canvas canvas, Input io, Rect board, SpriteAtlas<Piece> pieces, Func<(int col, int row), Piece?> selector)
         where Piece : struct, Enum
     {
 
@@ -65,7 +65,7 @@ internal class CheckersBoard(int cols, int rows)
         {
             for (int row = 0; row < _rows; row++)
             {
-                if (selector(row, col) is { } piece)
+                if (selector((col, row)) is { } piece)
                 {
                     var sprite = pieces[piece];
                     var rect = new Rect(ox + col * dx, oy + row * dy, dx, dy);
