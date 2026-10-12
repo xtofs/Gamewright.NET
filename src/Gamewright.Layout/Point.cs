@@ -1,4 +1,4 @@
-namespace Gamewright;
+namespace Gamewright.Layout;
 
 public record struct Point(float X, float Y)
 {
@@ -7,8 +7,9 @@ public record struct Point(float X, float Y)
     public readonly Point Clamp(Rect rect)
     {
         return new Point(
-            MathF.Max(rect.Left, MathF.Min(X, rect.Right)),
-            MathF.Max(rect.Top, MathF.Min(Y, rect.Bottom))
+            MathF.Max(rect.X, MathF.Min(X, rect.MaxX)),
+            MathF.Max(rect.Y, MathF.Min(Y, rect.MaxY))
         );
     }
 }
+

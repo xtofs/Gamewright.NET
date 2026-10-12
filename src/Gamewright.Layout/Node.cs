@@ -24,8 +24,10 @@ namespace Gamewright.Layout;
 //
 // The per-axis arithmetic is written once (MeasureAxis / ArrangeAxis) and 
 // applied to X and Y independently.
-public abstract record Node(params Node[] Children)
+public abstract record Node
 {
+    public abstract IEnumerable<Node> Children { get; }
+
     // ── Inputs ──
 
     /// <summary>Optional identifier for the renderer and for debugging.</summary>
@@ -75,9 +77,9 @@ public abstract record Node(params Node[] Children)
     public void Layout(Size viewport)
     {
         Measure(viewport);
-        Arrange(Rect.FromPositionAndSize(0, 0,
-            float.IsPositiveInfinity(viewport.Width) ? DesiredSize.Width : viewport.Width,
-            float.IsPositiveInfinity(viewport.Height) ? DesiredSize.Height : viewport.Height));
+        Arrange(new Rect(0, 0,
+            float.IsPositiveInfinity(viewport.W) ? DesiredSize.W : viewport.W,
+            float.IsPositiveInfinity(viewport.H) ? DesiredSize.H : viewport.H));
     }
 
     public IEnumerable<Node> DescendantsAndSelf()
@@ -103,19 +105,19 @@ public abstract record Node(params Node[] Children)
 
         // 1. Remove margin. 2. Clamp the constraint into [min, max].
         var constraint = new Size(
-            Clamp(MathF.Max(0, availableSize.Width - Margin.Horizontal), minW, maxW),
-            Clamp(MathF.Max(0, availableSize.Height - Margin.Vertical), minH, maxH));
+            Clamp(MathF.Max(0, availableSize.W - Margin.Horizontal), minW, maxW),
+            Clamp(MathF.Max(0, availableSize.H - Margin.Vertical), minH, maxH));
 
         // 3. Ask the subclass.
         var content = MeasureOverride(constraint);
-        if (!float.IsFinite(content.Width) || !float.IsFinite(content.Height))
+        if (!float.IsFinite(content.W) || !float.IsFinite(content.H))
         {
             throw new InvalidOperationException($"{GetType().Name}.MeasureOverride must return a finite size, got {content}.");
         }
 
         // 4. Enforce min/max on the answer, add margin back, never exceed what was offered.
-        var (uw, dw) = MeasureAxis(content.Width, minW, maxW, Margin.Horizontal, availableSize.Width);
-        var (uh, dh) = MeasureAxis(content.Height, minH, maxH, Margin.Vertical, availableSize.Height);
+        var (uw, dw) = MeasureAxis(content.W, minW, maxW, Margin.Horizontal, availableSize.W);
+        var (uh, dh) = MeasureAxis(content.H, minH, maxH, Margin.Vertical, availableSize.H);
         _unclippedDesired = new Size(uw, uh);
         DesiredSize = new Size(dw, dh);
     }
@@ -143,11 +145,11 @@ public abstract record Node(params Node[] Children)
         var (_, maxW) = MinMax(Width, MinWidth, MaxWidth);
         var (_, maxH) = MinMax(Height, MinHeight, MaxHeight);
 
-        var x = ArrangeAxis(finalRect.MinX, finalRect.Width, Margin.Left, Margin.Right, HorizontalAlignment, _unclippedDesired.Width, maxW);
-        var y = ArrangeAxis(finalRect.MinY, finalRect.Height, Margin.Top, Margin.Bottom, VerticalAlignment, _unclippedDesired.Height, maxH);
+        var x = ArrangeAxis(finalRect.X, finalRect.W, Margin.Left, Margin.Right, HorizontalAlignment, _unclippedDesired.W, maxW);
+        var y = ArrangeAxis(finalRect.Y, finalRect.H, Margin.Top, Margin.Bottom, VerticalAlignment, _unclippedDesired.H, maxH);
 
-        Bounds = Rect.FromPositionAndSize(x.Pos, y.Pos, x.Size, y.Size);
-        Clip = Rect.FromPositionAndSize(x.ClipPos, y.ClipPos, x.ClipSize, y.ClipSize);
+        Bounds = new Rect(x.Pos, y.Pos, x.Size, y.Size);
+        Clip = new Rect(x.ClipPos, y.ClipPos, x.ClipSize, y.ClipSize);
         IsClipped = x.Clipped || y.Clipped;
 
         ArrangeOverride(Bounds);

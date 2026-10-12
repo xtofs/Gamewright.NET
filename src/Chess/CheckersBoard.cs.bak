@@ -1,4 +1,5 @@
 using Gamewright;
+using Gamewright.Layout;
 
 namespace Chess;
 
@@ -10,7 +11,7 @@ internal class CheckersBoard(int cols, int rows)
     public Rect Draw(Canvas canvas, Input io, Rect rect, (int col, int row)? highlight, out (int col, int row)? clicked)
     {
         var center = rect.Center;
-        var board = Rect.FromCenter(center, Size.Square(MathF.Min(rect.Width, rect.Height) * 0.95f));
+        var board = Rect.FromCenter(center, Size.Square(MathF.Min(rect.W, rect.H) * 0.95f));
 
         var (ox, oy) = board.TopLeft;       // offset
         var (dx, dy) = board.Size / 8f;     // delta
@@ -21,7 +22,7 @@ internal class CheckersBoard(int cols, int rows)
             {
                 var r = new Rect(ox + col * dx, oy + row * dy, dx, dy);
                 var color = (col + row) % 2 == 0 ? Colors.LightGray : Colors.DarkGray;
-                canvas.Rect(r.Left, r.Top, r.Width, r.Height, color);
+                canvas.FillRect(r.X, r.Y, r.W, r.H, color);
             }
         }
 
@@ -29,19 +30,19 @@ internal class CheckersBoard(int cols, int rows)
         for (int row = 0; row <= _rows; row++)
         {
             var y = oy + row * dy;
-            canvas.Line(board.Left, y, board.Right, y, 1.0f, Colors.Black);
+            canvas.Line(board.X, y, board.MaxX, y, 1.0f, Colors.Black);
         }
         for (int col = 0; col <= _cols; col++)
         {
             var x = ox + col * dx;
-            canvas.Line(x, board.Top, x, board.Bottom, 1.0f, Colors.Black);
+            canvas.Line(x, board.Y, x, board.MaxY, 1.0f, Colors.Black);
         }
 
         // Highlight the selected square, if any.
         if (highlight is { } hl)
         {
             var (col, row) = hl;
-            canvas.Rect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
+            canvas.FillRect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
         }
 
         // Input handling for clicks

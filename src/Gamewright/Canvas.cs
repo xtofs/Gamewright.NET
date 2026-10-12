@@ -2,6 +2,8 @@ namespace Gamewright;
 
 using System.Runtime.InteropServices;
 
+using Gamewright.Layout;
+
 /// <summary>
 /// Per-frame command buffer of 32-bit slots. Numbers are stored as float; colors (0xRRGGBBAA)
 /// are stored as raw uint bits and never pass through a float. JSImport MemoryView only
@@ -26,21 +28,33 @@ public sealed class Canvas
     public void Clear(Color color)
     {
         Ensure(2);
-        _buf[_n++] = OpClear; PutColor(color);
+        _buf[_n++] = OpClear;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
-    public void Rect(float x, float y, float w, float h, Color color)
+    private static float ColorAsFloat(Color color) => BitConverter.UInt32BitsToSingle(color.Packed);
+
+    public void FillRect(Rect rect, Color color)
     {
         Ensure(6);
-        _buf[_n++] = OpRect; _buf[_n++] = x; _buf[_n++] = y; _buf[_n++] = w; _buf[_n++] = h; PutColor(color);
+        _buf[_n++] = OpRect;
+        _buf[_n++] = rect.X;
+        _buf[_n++] = rect.Y;
+        _buf[_n++] = rect.W;
+        _buf[_n++] = rect.H;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
-    public void StrokeRect(float x, float y, float w, float h, float lineWidth, Color color)
+    public void StrokeRect(Rect rect, float lineWidth, Color color)
     {
         Ensure(7);
         _buf[_n++] = OpStrokeRect;
-        _buf[_n++] = x; _buf[_n++] = y; _buf[_n++] = w; _buf[_n++] = h;
-        _buf[_n++] = lineWidth; PutColor(color);
+        _buf[_n++] = rect.X;
+        _buf[_n++] = rect.Y;
+        _buf[_n++] = rect.W;
+        _buf[_n++] = rect.H;
+        _buf[_n++] = lineWidth;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
     public void Line(float x1, float y1, float x2, float y2, float lineWidth, Color color)
@@ -48,23 +62,33 @@ public sealed class Canvas
         Ensure(7);
         _buf[_n++] = OpLine;
         _buf[_n++] = x1; _buf[_n++] = y1; _buf[_n++] = x2; _buf[_n++] = y2;
-        _buf[_n++] = lineWidth; PutColor(color);
+        _buf[_n++] = lineWidth;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
 
     public void Circle(float x, float y, float r, Color color)
     {
         Ensure(5);
-        _buf[_n++] = OpCircle; _buf[_n++] = x; _buf[_n++] = y; _buf[_n++] = r; PutColor(color);
+        _buf[_n++] = OpCircle;
+        _buf[_n++] = x;
+        _buf[_n++] = y;
+        _buf[_n++] = r;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
     /// <summary>Centered text. Strings are interned: each distinct string crosses to JS once.
     /// Avoid building a new string every frame (e.g. $"t={time}"), or the table grows unbounded.</summary>
-    public void Text(string s, float x, float y, float size, Color color)
+    public void Text(string s, Point point, float fontSize, Color color)
     {
         Ensure(6);
 
-        _buf[_n++] = OpText; _buf[_n++] = Intern(s); _buf[_n++] = x; _buf[_n++] = y; _buf[_n++] = size; PutColor(color);
+        _buf[_n++] = OpText;
+        _buf[_n++] = Intern(s);
+        _buf[_n++] = point.X;
+        _buf[_n++] = point.Y;
+        _buf[_n++] = fontSize;
+        _buf[_n++] = ColorAsFloat(color);
     }
 
     // ---- Images -----------------------------------------------------------------------------
@@ -77,8 +101,8 @@ public sealed class Canvas
     readonly Dictionary<int, Image> _images = new();
     int _nextImageId;
 
-    internal readonly List<(int Id, string Url)> PendingImageLoads = new();
-    internal readonly List<int> PendingImageFrees = new();
+    internal readonly List<(int Id, string Url)> PendingImageLoads = [];
+    internal readonly List<int> PendingImageFrees = [];
 
     /// <summary>
     /// Starts loading an image and returns its handle immediately. The url is resolved against the page's
@@ -105,7 +129,7 @@ public sealed class Canvas
     /// <param name="alpha">Opacity from 0 to 1.</param>
     /// <param name="pixelated">Disable smoothing when scaling, for crisp pixel art.</param>
     public void DrawImage(Image image, Rect dest, float alpha = 1f, bool pixelated = false) =>
-        DrawImage(image, new Rect(0, 0, image.Size.Width, image.Size.Height), dest, alpha, pixelated);
+        DrawImage(image, new Rect(Point.Zero, image.Size), dest, alpha, pixelated);
 
     /// <summary>
     /// Draws the <paramref name="source"/> region (in image pixels) of the image into <paramref name="dest"/>
@@ -126,9 +150,16 @@ public sealed class Canvas
         }
 
         Ensure(12);
-        _buf[_n++] = OpImage; _buf[_n++] = image.Id;
-        _buf[_n++] = source.Left; _buf[_n++] = source.Top; _buf[_n++] = source.Width; _buf[_n++] = source.Height;
-        _buf[_n++] = dest.Left; _buf[_n++] = dest.Top; _buf[_n++] = dest.Width; _buf[_n++] = dest.Height;
+        _buf[_n++] = OpImage;
+        _buf[_n++] = image.Id;
+        _buf[_n++] = source.X;
+        _buf[_n++] = source.Y;
+        _buf[_n++] = source.W;
+        _buf[_n++] = source.H;
+        _buf[_n++] = dest.X;
+        _buf[_n++] = dest.Y;
+        _buf[_n++] = dest.W;
+        _buf[_n++] = dest.H;
         _buf[_n++] = Math.Clamp(alpha, 0f, 1f);
         _buf[_n++] = pixelated ? 1f : 0f;   // flags: bit 0 = pixelated
     }
@@ -153,10 +184,6 @@ public sealed class Canvas
             PendingImageFrees.Add(image.Id);
         }
     }
-
-    // Write the color's bit pattern through a uint view. A packed RGBA value converted to float
-    // would be rounded (24-bit mantissa), and e.g. 0xFFFFFFFF is a NaN pattern.
-    private void PutColor(Color color) => MemoryMarshal.Cast<float, uint>(_buf.AsSpan())[_n++] = color.RGBA;
 
     private int Intern(string s)
     {

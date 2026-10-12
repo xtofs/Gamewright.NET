@@ -1,4 +1,5 @@
 using Gamewright;
+using Gamewright.Layout;
 
 namespace Chess;
 
@@ -7,14 +8,21 @@ namespace Chess;
 /// </summary>
 public sealed class ChessApp : IImmediateApp
 {
-    private readonly CheckersBoard _checkersBoard = new CheckersBoard(8, 8);
+    private readonly ChessGame _chessGame;
+
+    private readonly Node _root;
+
+    private readonly Checkerboard _board;
+
+
+    public ChessApp()
+    {
+        _chessGame = new ChessGame();
+        _board = new Checkerboard();
+        _root = new CenteredSquareNode(_board) { Margin = 5 };
+    }
 
     private SpriteAtlas<ChessPiece> _pieces = null!;   // created in LoadResources, before the first frame
-
-    private readonly ChessGame _chessGame = new ChessGame();
-
-    // UI state: selected square on the board
-    private (int col, int row)? _selectedSquare;
 
     public void LoadResources(ResourceLoader resources)
     {
@@ -23,35 +31,63 @@ public sealed class ChessApp : IImmediateApp
 
     public void RenderFrame(float timeMs, in Input io, Canvas canvas)
     {
-        canvas.Clear(new Color(0x14181EFF));
+        _root.Layout(io.Size);
 
-        var outline = _checkersBoard.Draw(canvas, io, io.Rect, _selectedSquare, out var clicked);
+        canvas.Clear(new Color(0x20, 0x20, 0x20));
 
-        if (clicked is { } click)
+
+        // _board.Draw(canvas);
+        var (light, dark) = (Colors.LightGray, Colors.DarkGray);
+
+        foreach (var node in _board.Squares)
         {
-            Console.WriteLine($"clicked {click} selected {_selectedSquare}");
-            if (_selectedSquare is { } sel)
+            var color = node.Parity == 0 ? light : dark;
+
+            canvas.FillRect(node.Bounds, color);
+            canvas.Text(node.Label, node.Bounds.Center, 18, Colors.Black);
+            if (node.Label == "d4")
             {
-                if (_chessGame[sel] != null && click != sel)
-                {
-                    Console.WriteLine($"moving {sel} to {click}");
-                    _chessGame.Move(sel, click);
-                    Console.WriteLine($"moved {_chessGame[sel]} to {_chessGame[click]}");
-                }
-                _selectedSquare = null;
-            }
-            else
-            {
-                _selectedSquare = click;
+                canvas.DrawSprite(_pieces[ChessPiece.WhiteQueen], node.Bounds);
             }
         }
 
-        _checkersBoard.DrawPieces(canvas, io, outline, _pieces, new Func<(int col, int row), ChessPiece?>(sq => _chessGame[sq]));
+
+        var (l2, d2) = (light.Darken(0.5f), dark.Darken(0.5f));
+        foreach (var node in _board.Labels)
+        {
+            var color = node.Parity % 2 != 0 ? l2 : d2;
+            canvas.FillRect(node.Bounds, color);
+
+            canvas.Text(node.Text, node.Bounds.Center, 18, Colors.White);
+        }
+
+
+        // var outline = _checkersBoard.Draw(canvas, io, io.Rect, _selectedSquare, out var clicked);
+
+        // if (clicked is { } click)
+        // {
+        //     Console.WriteLine($"clicked {click} selected {_selectedSquare}");
+        //     if (_selectedSquare is { } sel)
+        //     {
+        //         if (_chessGame[sel] != null && click != sel)
+        //         {
+        //             Console.WriteLine($"moving {sel} to {click}");
+        //             _chessGame.Move(sel, click);
+        //             Console.WriteLine($"moved {_chessGame[sel]} to {_chessGame[click]}");
+        //         }
+        //         _selectedSquare = null;
+        //     }
+        //     else
+        //     {
+        //         _selectedSquare = click;
+        //     }
+        // }
+
 
         // Pointer follower.
         var pos = new Point(io.MouseX, io.MouseY);
-        pos = pos.Clamp(outline);
-        canvas.Circle(pos.X, pos.Y, 5, new Color(0x4FC3F7FF));
+        pos = pos.Clamp(io.Rect);
+        canvas.Circle(pos.X, pos.Y, 5, new Color(0x4F, 0xC3, 0xF7, 0xFF));
     }
 
 

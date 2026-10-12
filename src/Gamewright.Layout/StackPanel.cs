@@ -9,20 +9,33 @@ namespace Gamewright.Layout;
 /// Cross axis: by default each child's own alignment decides (WPF behavior). Setting
 /// CrossAlignment overrides it for all children, like CSS align-items.
 /// </summary>
-public sealed record StackPanel(Orientation Orientation, params Node[] Children) : Node(Children)
+public sealed record StackPanel : Node
 {
+    public StackPanel(Orientation Orientation, params Node[] children)
+    {
+        this.Orientation = Orientation;
+        this.Children = children;
+    }
+
+    public Orientation Orientation { get; }
+
+    public override IReadOnlyList<Node> Children { get; }
+
     public float Spacing { get; init; }
+
     public Alignment? CrossAlignment { get; init; }
 
     private bool IsHorizontal => Orientation == Orientation.Horizontal;
-    private float MainSize(Size s) => IsHorizontal ? s.Width : s.Height;
-    private float CrossSize(Size s) => IsHorizontal ? s.Height : s.Width;
+
+    private float MainSize(Size s) => IsHorizontal ? s.W : s.H;
+
+    private float CrossSize(Size s) => IsHorizontal ? s.H : s.W;
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var constraint = IsHorizontal
-            ? new Size(float.PositiveInfinity, availableSize.Height)
-            : new Size(availableSize.Width, float.PositiveInfinity);
+            ? new Size(float.PositiveInfinity, availableSize.H)
+            : new Size(availableSize.W, float.PositiveInfinity);
 
         float main = 0, cross = 0;
         foreach (var child in Children)
@@ -31,9 +44,9 @@ public sealed record StackPanel(Orientation Orientation, params Node[] Children)
             main += MainSize(child.DesiredSize);
             cross = MathF.Max(cross, CrossSize(child.DesiredSize));
         }
-        if (Children.Length > 1)
+        if (Children.Count > 1)
         {
-            main += Spacing * (Children.Length - 1);
+            main += Spacing * (Children.Count - 1);
         }
 
         return IsHorizontal ? new Size(main, cross) : new Size(cross, main);
@@ -41,13 +54,13 @@ public sealed record StackPanel(Orientation Orientation, params Node[] Children)
 
     protected override void ArrangeOverride(Rect bounds)
     {
-        float pos = IsHorizontal ? bounds.MinX : bounds.MinY;
-        float crossStart = IsHorizontal ? bounds.MinY : bounds.MinX;
-        float crossSize = IsHorizontal ? bounds.Height : bounds.Width;
+        float pos = IsHorizontal ? bounds.X : bounds.Y;
+        float crossStart = IsHorizontal ? bounds.Y : bounds.X;
+        float crossSize = IsHorizontal ? bounds.H : bounds.W;
 
         foreach (var child in Children)
         {
-            float main = MainSize(child.DesiredSize);
+            float mainSize = MainSize(child.DesiredSize);
             float cross = CrossSize(child.DesiredSize);
 
             // Default: the full cross extent; the child aligns itself inside it.
@@ -65,9 +78,9 @@ public sealed record StackPanel(Orientation Orientation, params Node[] Children)
             }
 
             child.Arrange(IsHorizontal
-                ? Rect.FromPositionAndSize(pos, slotStart, main, slotSize)
-                : Rect.FromPositionAndSize(slotStart, pos, slotSize, main));
-            pos += main + Spacing;
+                ? new Rect(pos, slotStart, mainSize, slotSize)
+                : new Rect(slotStart, pos, slotSize, mainSize));
+            pos += mainSize + Spacing;
         }
     }
 }

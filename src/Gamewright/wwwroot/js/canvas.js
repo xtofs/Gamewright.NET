@@ -102,7 +102,7 @@ function resize() {
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
-  
+
   const pw = Math.round(w * dpr),
     ph = Math.round(h * dpr);
   if (canvas.width !== pw || canvas.height !== ph) {
@@ -117,7 +117,7 @@ function resize() {
 
 // Colors are packed 0xRRGGBBAA and travel as raw uint32 bits (read via the Uint32Array view).
 function cssColor(v) {
-  return `rgba(${v >>> 24},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
+  return `rgba(${(v >>> 24) & 255},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
 }
 
 // Opcodes must match Canvas2D.cs.
@@ -174,6 +174,7 @@ export function submit(view) {
         ctx.font = `${size}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
         ctx.fillText(s, x, y);
         break;
       }

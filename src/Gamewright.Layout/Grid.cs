@@ -6,11 +6,24 @@ using Microsoft.Extensions.Primitives;
 /// Grid with Pixel / Auto / Star tracks, Min/Max per track, row and column spans,
 /// and RowSpacing/ColumnSpacing (WinUI-style). Empty Columns or Rows = one star track.
 /// </summary>
-public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Rows, params Cell[] Cells)
-    : Node([.. Cells.Select(c => c.Content)])
+public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Rows, params Grid.Cell[] Cells) : Node
 {
+    /// <summary>
+    /// Placement data for one grid child. Composition instead of attached properties:
+    /// the node knows nothing about the grid it sits in.
+    /// </summary>
+    public sealed record Cell(int Row, int Column, Node Content)
+    {
+        public int RowSpan { get; init; } = 1;
+        public int ColumnSpan { get; init; } = 1;
+    }
+
+
     public Grid(string Columns, string Rows, params Cell[] Cells)
         : this(ParseDefinition(Columns), ParseDefinition(Rows), Cells) { }
+
+    public override IReadOnlyList<Node> Children => [.. Cells.Select(c => c.Content)];
+
 
     public float RowSpacing { get; init; }
 
@@ -20,6 +33,8 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
     private readonly IReadOnlyList<Track> _implicitColumn = [new Track()];
     private IReadOnlyList<Track> EffRows => Rows.Count > 0 ? Rows : _implicitRow;
     private IReadOnlyList<Track> EffColumns => Columns.Count > 0 ? Columns : _implicitColumn;
+
+
 
     // ── Measure ──
     //
@@ -39,8 +54,8 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
     {
         var rows = EffRows;
         var cols = EffColumns;
-        InitTracks(cols, float.IsPositiveInfinity(availableSize.Width));
-        InitTracks(rows, float.IsPositiveInfinity(availableSize.Height));
+        InitTracks(cols, float.IsPositiveInfinity(availableSize.W));
+        InitTracks(rows, float.IsPositiveInfinity(availableSize.H));
 
         List<Cell> g1 = [], g2 = [], g3 = [], g4 = [];
         foreach (var cell in Cells)
@@ -64,12 +79,12 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
         foreach (var c in g3) { MeasureCell(c, colsResolved: false, rowsResolved: false); }
         ContributeToAuto(g3, columns: true);
 
-        ResolveStars(cols, availableSize.Width, ColumnSpacing, useContentMin: false);
+        ResolveStars(cols, availableSize.W, ColumnSpacing, useContentMin: false);
 
         foreach (var c in g2) { MeasureCell(c, colsResolved: true, rowsResolved: false); }
         ContributeToAuto(g2, columns: false);
 
-        ResolveStars(rows, availableSize.Height, RowSpacing, useContentMin: false);
+        ResolveStars(rows, availableSize.H, RowSpacing, useContentMin: false);
 
         foreach (var c in g3) { MeasureCell(c, colsResolved: true, rowsResolved: true); }
         foreach (var c in g4) { MeasureCell(c, colsResolved: true, rowsResolved: true); }
@@ -132,7 +147,7 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
             var (start, count) = columns
                 ? Range(cell.Column, cell.ColumnSpan, tracks.Count)
                 : Range(cell.Row, cell.RowSpan, tracks.Count);
-            float desired = columns ? cell.Content.DesiredSize.Width : cell.Content.DesiredSize.Height;
+            float desired = columns ? cell.Content.DesiredSize.W : cell.Content.DesiredSize.H;
 
             float current = spacing * (count - 1);
             List<Track> autos = [];
@@ -204,8 +219,8 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
         {
             var (cs, cn) = Range(cell.Column, cell.ColumnSpan, cols.Count);
             var (rs, rn) = Range(cell.Row, cell.RowSpan, rows.Count);
-            if (cn == 1) { cols[cs].ContentSize = MathF.Max(cols[cs].ContentSize, cell.Content.DesiredSize.Width); }
-            if (rn == 1) { rows[rs].ContentSize = MathF.Max(rows[rs].ContentSize, cell.Content.DesiredSize.Height); }
+            if (cn == 1) { cols[cs].ContentSize = MathF.Max(cols[cs].ContentSize, cell.Content.DesiredSize.W); }
+            if (rn == 1) { rows[rs].ContentSize = MathF.Max(rows[rs].ContentSize, cell.Content.DesiredSize.H); }
         }
     }
 
@@ -228,19 +243,21 @@ public sealed record Grid(IReadOnlyList<Track> Columns, IReadOnlyList<Track> Row
             if (t.Size.Unit == GridUnit.Star) { t.Effective = GridUnit.Star; }
         }
 
-        ResolveStars(cols, bounds.Width, ColumnSpacing, useContentMin: true);
-        ResolveStars(rows, bounds.Height, RowSpacing, useContentMin: true);
-        SetOffsets(cols, bounds.MinX, ColumnSpacing);
-        SetOffsets(rows, bounds.MinY, RowSpacing);
+        ResolveStars(cols, bounds.W, ColumnSpacing, useContentMin: true);
+        ResolveStars(rows, bounds.H, RowSpacing, useContentMin: true);
+        SetOffsets(cols, bounds.X, ColumnSpacing);
+        SetOffsets(rows, bounds.Y, RowSpacing);
 
         foreach (var cell in Cells)
         {
             var (cs, cn) = Range(cell.Column, cell.ColumnSpan, cols.Count);
             var (rs, rn) = Range(cell.Row, cell.RowSpan, rows.Count);
-            cell.Content.Arrange(Rect.FromPositionAndSize(
+            var rect = new Rect(
                 cols[cs].Offset, rows[rs].Offset,
                 SpanSize(cols, cs, cn, ColumnSpacing),
-                SpanSize(rows, rs, rn, RowSpacing)));
+                SpanSize(rows, rs, rn, RowSpacing));
+
+            cell.Content.Arrange(rect);
         }
     }
 

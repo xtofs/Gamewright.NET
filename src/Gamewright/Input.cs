@@ -1,3 +1,5 @@
+using Gamewright.Layout;
+
 namespace Gamewright;
 
 /// <summary>Snapshot of input for one frame. Layout mirrors the Float32Array in canvas.js.</summary>
@@ -16,12 +18,12 @@ public readonly record struct Input(
 
 
     public bool IsInside(Rect r) =>
-            MouseX >= r.Left && MouseX < r.Left + r.Width && MouseY >= r.Top && MouseY < r.Top + r.Height;
+            MouseX >= r.X && MouseX < r.MaxX && MouseY >= r.Y && MouseY < r.MaxY;
 
 
     public Size Size => new Size(Width, Height);
 
-    public Rect Rect => new Rect(0, 0, Width, Height);
+    public Rect Rect => new Rect(Point.Zero, Size);
 
     public Point Center => new Point(Width / 2, Height / 2);
 

@@ -1,23 +1,37 @@
 namespace Gamewright.Layout;
 
 
-public readonly record struct Rect(float MinX, float MinY, float MaxX, float MaxY)
+public readonly record struct Rect(float X, float Y, float W, float H)
 {
-    public static Rect Empty { get; } = new Rect(0, 0, 0, 0);
+    public Rect(Point topLeft, Size size) : this(topLeft.X, topLeft.Y, size.W, size.H) { }
 
-    public readonly float Width => MaxX - MinX;
-    public readonly float Height => MaxY - MinY;
+    public Size Size => new Size(W, H);
 
-    public static Rect FromPositionAndSize(float x, float y, float width, float height) => new(x, y, x + width, y + height);
+    public float Area => W * H;
 
+    public float MaxX => X + W;
 
-    public float Area => Width * Height;
+    public float MaxY => Y + H;
+
+    public Point Center => new Point(X + W / 2, Y + H / 2);
+
+    public Point TopLeft => new Point(X, Y);
+
+    // [Obsolete("Use constructor instead.")]
+    // public static Rect FromPositionAndSize(float x, float y, float width, float height) => new(x, y, width, height);
 
     private bool PrintMembers(System.Text.StringBuilder builder)
     {
-        builder.Append($"MinX = {MinX}, MinY = {MinY}, MaxX = {MaxX}, MaxY = {MaxY}");
+        builder.Append($"X = {X}, Y = {Y}, W = {W}, H = {H}");
         return true;
     }
 
-    public readonly Rect Inflate(float dx, float dy) => new Rect(MinX - dx, MinY - dy, MaxX + dx, MaxY + dy);
+    public readonly Rect Inflate(float dx, float dy) => new Rect(X - dx, Y - dy, W + 2 * dx, H + 2 * dy);
+
+    public readonly Rect Deflate(float dx, float dy) => new Rect(X + dx, Y + dy, W - 2 * dx, H - 2 * dy);
+
+    public static Rect FromCenter(Point center, Size size)
+    {
+        return new Rect(center.X - size.W / 2, center.Y - size.H / 2, size.W, size.H);
+    }
 }

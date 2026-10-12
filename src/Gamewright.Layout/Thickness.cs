@@ -11,4 +11,12 @@ public readonly record struct Thickness(float Left, float Top, float Right, floa
     public float Vertical => Top + Bottom;
 
     public static implicit operator Thickness(float uniform) => new(uniform);
+
+
+    private bool PrintMembers(System.Text.StringBuilder builder)
+    {
+        builder.Append($"Left = {Left}, Top = {Top}, Right = {Right}, Bottom = {Bottom}");
+        return true;
+    }
+
 }
