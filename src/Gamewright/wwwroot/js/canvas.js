@@ -100,8 +100,9 @@ function tick(t) {
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth,
-    h = canvas.clientHeight;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  
   const pw = Math.round(w * dpr),
     ph = Math.round(h * dpr);
   if (canvas.width !== pw || canvas.height !== ph) {
@@ -115,14 +116,14 @@ function resize() {
 }
 
 // Colors are packed 0xRRGGBBAA and travel as raw uint32 bits (read via the Uint32Array view).
-function css(v) {
+function cssColor(v) {
   return `rgba(${v >>> 24},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
 }
 
 // Opcodes must match Canvas2D.cs.
 export function submit(view) {
   const bytes = view.slice(); // copy out of WASM memory (view dies after this call)
-  const c = new Float32Array(
+  const f = new Float32Array(
     bytes.buffer,
     bytes.byteOffset,
     bytes.byteLength / 4,
@@ -133,30 +134,31 @@ export function submit(view) {
     bytes.byteLength / 4,
   ); // colors (raw bits)
   let i = 0;
-  while (i < c.length) {
-    switch (c[i++]) {
+  while (i < f.length) {
+    switch (f[i++]) {
       case 0: {
         // Clear rgba
-        ctx.fillStyle = css(u[i++]);
+        ctx.fillStyle = cssColor(u[i++]);
         ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         break;
       }
       case 1: {
         // Rect x y w h rgba
-        const x = c[i++],
-          y = c[i++],
-          w = c[i++],
-          h = c[i++];
-        ctx.fillStyle = css(u[i++]);
+        const x = f[i++];
+        const y = f[i++];
+        const w = f[i++];
+        const h = f[i++];
+        ctx.fillStyle = cssColor(u[i++]);
+
         ctx.fillRect(x, y, w, h);
         break;
       }
       case 2: {
         // Circle x y r rgba
-        const x = c[i++],
-          y = c[i++],
-          r = c[i++];
-        ctx.fillStyle = css(u[i++]);
+        const x = f[i++],
+          y = f[i++],
+          r = f[i++];
+        ctx.fillStyle = cssColor(u[i++]);
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
@@ -164,11 +166,11 @@ export function submit(view) {
       }
       case 3: {
         // Text strId x y size rgba (centered)
-        const s = strings[c[i++]],
-          x = c[i++],
-          y = c[i++],
-          size = c[i++];
-        ctx.fillStyle = css(u[i++]);
+        const s = strings[f[i++]],
+          x = f[i++],
+          y = f[i++],
+          size = f[i++];
+        ctx.fillStyle = cssColor(u[i++]);
         ctx.font = `${size}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -177,23 +179,23 @@ export function submit(view) {
       }
       case 4: {
         // StrokeRect x y w h lineWidth rgba
-        const x = c[i++],
-          y = c[i++],
-          w = c[i++],
-          h = c[i++];
-        ctx.lineWidth = c[i++];
-        ctx.strokeStyle = css(u[i++]);
+        const x = f[i++],
+          y = f[i++],
+          w = f[i++],
+          h = f[i++];
+        ctx.lineWidth = f[i++];
+        ctx.strokeStyle = cssColor(u[i++]);
         ctx.strokeRect(x, y, w, h);
         break;
       }
       case 5: {
         // Line x1, y1, x2, y2 lineWidth rgba
-        const x1 = c[i++],
-          y1 = c[i++],
-          x2 = c[i++],
-          y2 = c[i++];
-        ctx.lineWidth = c[i++];
-        ctx.strokeStyle = css(u[i++]);
+        const x1 = f[i++],
+          y1 = f[i++],
+          x2 = f[i++],
+          y2 = f[i++];
+        ctx.lineWidth = f[i++];
+        ctx.strokeStyle = cssColor(u[i++]);
 
         ctx.beginPath();
         ctx.moveTo(x1, y1); // move to the starting point
@@ -203,17 +205,17 @@ export function submit(view) {
       }
       case 6: {
         // Image id sx sy sw sh dx dy dw dh alpha flags (flags bit 0 = pixelated)
-        const bitmap = images[c[i++]],
-          sx = c[i++],
-          sy = c[i++],
-          sw = c[i++],
-          sh = c[i++],
-          dx = c[i++],
-          dy = c[i++],
-          dw = c[i++],
-          dh = c[i++],
-          alpha = c[i++],
-          flags = c[i++];
+        const bitmap = images[f[i++]],
+          sx = f[i++],
+          sy = f[i++],
+          sw = f[i++],
+          sh = f[i++],
+          dx = f[i++],
+          dy = f[i++],
+          dw = f[i++],
+          dh = f[i++],
+          alpha = f[i++],
+          flags = f[i++];
         // All operands are consumed above even if the bitmap is gone, so the stream never desyncs.
         if (bitmap) {
           ctx.globalAlpha = alpha;
@@ -225,7 +227,7 @@ export function submit(view) {
         break;
       }
       default:
-        console.log(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
+        console.log(`Unknown opcode ${f[i - 1]} at ${i - 1}`);
       // throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
     }
   }

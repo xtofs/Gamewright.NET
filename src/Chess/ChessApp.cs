@@ -49,7 +49,7 @@ public sealed class ChessApp : IImmediateApp
         _checkersBoard.DrawPieces(canvas, io, outline, _pieces, new Func<(int col, int row), ChessPiece?>(sq => _chessGame[sq]));
 
         // Pointer follower.
-        var pos = new Point(io.X, io.Y);
+        var pos = new Point(io.MouseX, io.MouseY);
         pos = pos.Clamp(outline);
         canvas.Circle(pos.X, pos.Y, 5, new Color(0x4FC3F7FF));
     }

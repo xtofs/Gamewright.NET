@@ -25,20 +25,29 @@ internal class CheckersBoard(int cols, int rows)
             }
         }
 
+        // Draw grid lines over the board
         for (int row = 0; row <= _rows; row++)
         {
             var y = oy + row * dy;
             canvas.Line(board.Left, y, board.Right, y, 1.0f, Colors.Black);
         }
-        for (int colr = 0; colr <= _cols; colr++)
+        for (int col = 0; col <= _cols; col++)
         {
-            var x = ox + colr * dx;
+            var x = ox + col * dx;
             canvas.Line(x, board.Top, x, board.Bottom, 1.0f, Colors.Black);
         }
 
-        if (io.Inside(board) && io.PrimaryPressed)
+        // Highlight the selected square, if any.
+        if (highlight is { } hl)
         {
-            var (col, row) = ((int)((io.X - ox) / dx), (int)((io.Y - oy) / dy));
+            var (col, row) = hl;
+            canvas.Rect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
+        }
+
+        // Input handling for clicks
+        if (io.IsInside(board) && io.PrimaryPressed)
+        {
+            var (col, row) = ((int)((io.MouseX - ox) / dx), (int)((io.MouseY - oy) / dy));
             clicked = (col, row);
         }
         else
@@ -46,11 +55,6 @@ internal class CheckersBoard(int cols, int rows)
             clicked = null;
         }
 
-        if (highlight is { } hl)
-        {
-            var (col, row) = hl;
-            canvas.Rect(ox + col * dx, oy + row * dy, dx, dy, Colors.OrangeRed);
-        }
         return board;
     }
 
