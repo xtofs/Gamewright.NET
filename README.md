@@ -12,6 +12,15 @@ dotnet run --project src/Chess/Chess.csproj
 
 Open the URL it prints. The sample draws a checkers board and a pointer follower.
 
+## Startup flow
+
+```plain
+Renderer.StartAsync (once)
+  ├─ app.LoadResources(loader)    runs before the frame loop; image loads are only queued here
+  ├─ Init(canvasId, ...)          .NET → JS   starts the rAF loop (its first frame runs later)
+  └─ LoadImage(id, url)           .NET → JS   hands the queued loads to JS, before the first frame
+```
+
 ## Per-frame flow
 
 ```plain
@@ -56,11 +65,11 @@ when `StartAsync` runs.
 - Adding a primitive requires a new opcode in
   `src/Gamewright/Gfx/Canvas.cs` and a matching case in
   `src/Gamewright/wwwroot/js/canvas.js`.
-- Images are retained resources behind immediate-mode draw calls. `canvas.LoadImage(url)` returns an
+- Images are retained resources behind immediate-mode draw calls. `resources.LoadImage(url)` returns an
   `Image` handle immediately and loads it asynchronously in the browser (`createImageBitmap`).
   `DrawImage`/`DrawSprite` calls are skipped until `image.IsReady`; after that they carry only the handle id
-  and rectangles (opcode 6). Keep the handle (`_atlas ??= canvas.LoadImage(...)`) and `Dispose` it to free
-  the bitmap. `SpriteSheet` addresses a regular grid of cells as `sheet[column, row]`.
+  and rectangles (opcode 6). Request images in `IImmediateApp.LoadResources`, which `Renderer.StartAsync` calls
+  once before the first frame, keep the handles in fields, and `Dispose` them to free the bitmap. `SpriteSheet` addresses a regular grid of cells as `sheet[column, row]`.
 - Avoid per-frame allocations (new strings, lambdas, `new SKPaint`-style objects):
   the WASM GC is not concurrent and stutters. For heavy frame logic, enable
   `<RunAOTCompilation>true</RunAOTCompilation>` (requires the `wasm-tools` workload).

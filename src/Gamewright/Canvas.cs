@@ -83,7 +83,9 @@ public sealed class Canvas
     /// <summary>
     /// Starts loading an image and returns its handle immediately. The url is resolved against the page's
     /// base address (e.g. "img/pieces.png" for a file in the host's wwwroot). Call this once and keep the
-    /// handle, e.g. <c>_atlas ??= canvas.LoadImage("img/atlas.png");</c>. Dispose the handle to free it.
+    /// handle. At startup prefer <see cref="IImmediateApp.LoadResources"/>, which receives a
+    /// <see cref="ResourceLoader"/>; use this method directly to load images at runtime. Dispose the handle
+    /// to free it.
     /// </summary>
     public Image LoadImage(string url)
     {

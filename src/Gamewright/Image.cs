@@ -1,7 +1,8 @@
 namespace Gamewright;
 
 /// <summary>
-/// Handle to an image owned by a <see cref="Canvas"/>. Create it once with <see cref="Canvas.LoadImage"/>,
+/// Handle to an image owned by a <see cref="Canvas"/>. Create it once, in <see cref="IImmediateApp.LoadResources"/>
+/// with <see cref="ResourceLoader.LoadImage"/>,
 /// keep it, and draw it every frame with <see cref="Canvas.DrawImage(Image, Rect, float, bool)"/>.
 /// Loading is asynchronous (it happens in the browser): until <see cref="IsReady"/> is true, draw calls are
 /// skipped and <see cref="Size"/> is (0, 0).

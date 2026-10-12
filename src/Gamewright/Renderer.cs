@@ -12,6 +12,7 @@ public sealed class Renderer
     readonly Action<float> _frame;   // one delegate instance, kept alive for JS
     readonly Action<int, int, int> _imageLoaded;   // same, for image completion callbacks
     bool _started;
+    bool _resourcesLoaded;
 
     public Renderer(IImmediateApp app)
     {
@@ -24,7 +25,16 @@ public sealed class Renderer
     public async Task StartAsync(string canvasId)
     {
         await JSHost.ImportAsync(CanvasInterop.Module, CanvasInterop.ModulePath);
-        CanvasInterop.Init(canvasId, _frame, _imageLoaded);
+
+        // Once, before the first frame. This runs before Init, so a failure leaves no half-started frame loop.
+        if (!_resourcesLoaded)
+        {
+            _app.LoadResources(new ResourceLoader(_canvas));
+            _resourcesLoaded = true;
+        }
+
+        CanvasInterop.Init(canvasId, _frame, _imageLoaded);   // starts the frame loop; its first frame runs later
+        FlushImages();   // hand the requested loads to JS now (they need Init's callback), before the first frame
         _started = true;
     }
 
@@ -46,7 +56,15 @@ public sealed class Renderer
             CanvasInterop.DefineString(id, value);
         _canvas.NewStrings.Clear();
 
-        // Loads before frees, so an image disposed in the frame it was created is cancelled cleanly.
+        FlushImages();
+
+        CanvasInterop.Submit(MemoryMarshal.AsBytes(_canvas.Commands));
+    }
+
+    // Forwards queued image loads and frees to JS. Loads go before frees, so an image disposed in the
+    // same frame it was created is cancelled cleanly.
+    void FlushImages()
+    {
         foreach (var (id, url) in _canvas.PendingImageLoads)
             CanvasInterop.LoadImage(id, url);
         _canvas.PendingImageLoads.Clear();
@@ -54,7 +72,5 @@ public sealed class Renderer
         foreach (var id in _canvas.PendingImageFrees)
             CanvasInterop.FreeImage(id);
         _canvas.PendingImageFrees.Clear();
-
-        CanvasInterop.Submit(MemoryMarshal.AsBytes(_canvas.Commands));
     }
 }
