@@ -1,8 +1,7 @@
 namespace Gamewright;
 
 /// <summary>Snapshot of input for one frame. Layout mirrors the Float32Array in canvas.js.</summary>
-public readonly record struct Input(
-    float TimeMs,
+public readonly record struct Input(    
     float Width, float Height, float DevicePixelRatio,
     float X, float Y,
     int ButtonsDown, int Pressed, int Released)
@@ -26,6 +25,6 @@ public readonly record struct Input(
     public bool Inside(float x, float y, float w, float h) =>
         X >= x && X < x + w && Y >= y && Y < y + h;
 
-    internal static Input From(float timeMs, ReadOnlySpan<float> b) =>
-        new(timeMs, b[0], b[1], b[2], b[3], b[4], (int)b[5], (int)b[6], (int)b[7]);
+    internal static Input FromSpan(ReadOnlySpan<float> b) =>
+        new(b[0], b[1], b[2], b[3], b[4], (int)b[5], (int)b[6], (int)b[7]);
 }

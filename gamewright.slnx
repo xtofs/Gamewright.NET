@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Gamewright.Layout/Gamewright.Layout.csproj" />
+  </Folder>
   <Project Path="src/Chess/Chess.csproj" />
   <Project Path="src/Gamewright/Gamewright.csproj" />
 </Solution>

@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
-
 namespace Gamewright;
+
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Per-frame command buffer of 32-bit slots. Numbers are stored as float; colors (0xRRGGBBAA)
@@ -38,7 +38,7 @@ public sealed class Canvas
     public void StrokeRect(float x, float y, float w, float h, float lineWidth, Color color)
     {
         Ensure(7);
-        _buf[_n++] = OpStrokeRect; 
+        _buf[_n++] = OpStrokeRect;
         _buf[_n++] = x; _buf[_n++] = y; _buf[_n++] = w; _buf[_n++] = h;
         _buf[_n++] = lineWidth; PutColor(color);
     }

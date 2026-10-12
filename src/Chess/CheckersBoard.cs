@@ -54,21 +54,21 @@ internal class CheckersBoard(int cols, int rows)
         return board;
     }
 
-    public void DrawPieces(Canvas canvas, Input io, Rect board, SpriteSheet pieces, (int, int)?[,] state)
+    public void DrawPieces<Piece>(Canvas canvas, Input io, Rect board, SpriteAtlas<Piece> pieces, Func<int, int, Piece?> selector)
+        where Piece : struct, Enum
     {
+
         var (ox, oy) = board.TopLeft;
         var (dx, dy) = board.Size / 8f;
 
-        // Console.WriteLine($"Drawing pieces for board state with dimensions: {state.GetLength(0)}x{state.GetLength(1)}");
-        for (int col = 0; col <= state.GetUpperBound(0); col++)
+        for (int col = 0; col < _cols; col++)
         {
-            for (int row = 0; row <= state.GetUpperBound(1); row++)
+            for (int row = 0; row < _rows; row++)
             {
-                if (state[row, col] is { } ix)
+                if (selector(row, col) is { } piece)
                 {
-                    var sprite = pieces[ix.Item2, ix.Item1];
+                    var sprite = pieces[piece];
                     var rect = new Rect(ox + col * dx, oy + row * dy, dx, dy);
-                    // Console.WriteLine($"drawing {ix} at {rect}");
                     canvas.DrawSprite(sprite, rect);
                 }
             }

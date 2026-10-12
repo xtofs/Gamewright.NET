@@ -8,4 +8,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Gamewright.Layout/Gamewright.Layout.csproj" />
+  </ItemGroup>
+
 </Project>

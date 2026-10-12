@@ -37,10 +37,10 @@ public sealed class Renderer
     void Frame(float timeMs)
     {
         CanvasInterop.ReadInput(MemoryMarshal.AsBytes(_input.AsSpan()));
-        var input = Input.From(timeMs, _input);
+        var input = Input.FromSpan(_input);
 
         _canvas.Reset();
-        _app.Frame(input, _canvas);
+        _app.RenderFrame(timeMs, input, _canvas);
 
         foreach (var (id, value) in _canvas.NewStrings)
             CanvasInterop.DefineString(id, value);

@@ -12,3 +12,24 @@ public readonly record struct SpriteSheet(Image Image, Size Cell)
     public Sprite this[int column, int row] =>
         new(Image, new Rect(column * Cell.Width, row * Cell.Height, Cell.Width, Cell.Height));
 }
+
+
+public class SpriteAtlas<TKey> where TKey : struct, Enum
+{
+    public SpriteSheet Sheet { get; }
+
+    private readonly Dictionary<TKey, Sprite> _dictionary;
+
+    public SpriteAtlas(Image image, Size spriteSize, Func<TKey, (int col, int row)> selector)
+    {
+        Sheet = new SpriteSheet(image, spriteSize);
+        _dictionary = new Dictionary<TKey, Sprite>();
+        foreach (TKey key in Enum.GetValues(typeof(TKey)))
+        {
+            var (row, col) = selector(key);
+            _dictionary[key] = Sheet[row, col];
+        }
+    }
+
+    public Sprite this[TKey key] => _dictionary[key];
+}
