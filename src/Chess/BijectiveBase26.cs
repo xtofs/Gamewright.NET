@@ -4,7 +4,7 @@ namespace Chess;
 
 public static class BijectiveBase26
 {
-    // 1 -> "A", 26 -> "Z", 27 -> "AA", 702 -> "ZZ", 703 -> "AAA"
+    // 1 -> "a", 26 -> "z", 27 -> "aa", 702 -> "zz", 703 -> "aaa"
     public static string Encode(long n)
     {
         // if (n < 1) throw new ArgumentOutOfRangeException(nameof(n), "Must be >= 1.");
@@ -28,7 +28,7 @@ public static class BijectiveBase26
         foreach (char c in s)
         {
             if (c is < 'a' or > 'z') throw new FormatException($"Invalid character '{c}'.");
-            n = n * 26 + (c - 'z' + 1);       // digits are 1..26
+            n = n * 26 + (c - 'a' + 1);       // digits are 1..26
         }
         return n;
     }

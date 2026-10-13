@@ -10,16 +10,17 @@ public sealed class ChessApp : IImmediateApp
 {
     private readonly ChessGame _chessGame;
 
-    private readonly Node _root;
-
     private readonly Checkerboard _board;
 
+    /// <summary>Selected square in chess coordinates (file 0 = a, rank 0 = 1).</summary>
+    private (int file, int rank)? _selectedSquare;
+
+    // Canvas.Text interns strings, so build every label once instead of once per frame.
 
     public ChessApp()
     {
         _chessGame = new ChessGame();
-        _board = new Checkerboard();
-        _root = new CenteredSquareNode(_board) { Margin = 5 };
+        _board = new Checkerboard { Margin = 5 };
     }
 
     private SpriteAtlas<ChessPiece> _pieces = null!;   // created in LoadResources, before the first frame
@@ -31,65 +32,88 @@ public sealed class ChessApp : IImmediateApp
 
     public void RenderFrame(float timeMs, in Input io, Canvas canvas)
     {
-        _root.Layout(io.Size);
+        _board.Layout(io.Size);
+        var geo = _board.Geometry;
+        var pointer = new Point(io.MouseX, io.MouseY);
 
+        // ── Input ──
+        if (io.PrimaryPressed && geo.TryGetSquare(pointer, out var clicked))
+        {
+            OnSquareClicked(clicked);
+        }
+        else if (io.PrimaryPressed)
+        {
+            _board.Flipped = !_board.Flipped;
+        }
+
+        // ── Draw ──
         canvas.Clear(new Color(0x20, 0x20, 0x20));
 
 
-        // _board.Draw(canvas);
-        var (light, dark) = (Colors.LightGray, Colors.DarkGray);
+        canvas.FillRect(geo.Board, Colors.CadetBlue);
 
-        foreach (var node in _board.Squares)
+        // draw the board
+        canvas.DrawBoard(geo);
+
+        if (_selectedSquare is { } ssq)
         {
-            var color = node.Parity == 0 ? light : dark;
+            var color = Colors.HotPink.Transparent(.5f);
+            var rect = geo.SquareRect(ssq.file, ssq.rank).Deflate(geo.Square * .1f); // 10% smaller than the square
+            canvas.StrokeRect(rect, io.Size.W / 100f, color);
+        }
 
-            canvas.FillRect(node.Bounds, color);
-            canvas.Text(node.Label, node.Bounds.Center, 18, Colors.Black);
-            if (node.Label == "d4")
+        // Draw the pieces on the board.
+        for (int file = 0; file < BoardGeometry.FilesCount; file++)
+        {
+            for (int rank = 0; rank < BoardGeometry.RanksCount; rank++)
             {
-                canvas.DrawSprite(_pieces[ChessPiece.WhiteQueen], node.Bounds);
+                if (_chessGame[ToGame(file, rank)] is { } piece)
+                {
+                    var rect = geo.SquareRect(file, rank);
+                    canvas.DrawSprite(_pieces[piece], rect);
+                }
             }
         }
 
-
-        var (l2, d2) = (light.Darken(0.5f), dark.Darken(0.5f));
-        foreach (var node in _board.Labels)
-        {
-            var color = node.Parity % 2 != 0 ? l2 : d2;
-            canvas.FillRect(node.Bounds, color);
-
-            canvas.Text(node.Text, node.Bounds.Center, 18, Colors.White);
-        }
-
-
-        // var outline = _checkersBoard.Draw(canvas, io, io.Rect, _selectedSquare, out var clicked);
-
-        // if (clicked is { } click)
-        // {
-        //     Console.WriteLine($"clicked {click} selected {_selectedSquare}");
-        //     if (_selectedSquare is { } sel)
-        //     {
-        //         if (_chessGame[sel] != null && click != sel)
-        //         {
-        //             Console.WriteLine($"moving {sel} to {click}");
-        //             _chessGame.Move(sel, click);
-        //             Console.WriteLine($"moved {_chessGame[sel]} to {_chessGame[click]}");
-        //         }
-        //         _selectedSquare = null;
-        //     }
-        //     else
-        //     {
-        //         _selectedSquare = click;
-        //     }
-        // }
-
-
         // Pointer follower.
-        var pos = new Point(io.MouseX, io.MouseY);
-        pos = pos.Clamp(io.Rect);
-        canvas.Circle(pos.X, pos.Y, 5, new Color(0x4F, 0xC3, 0xF7, 0xFF));
+        var pos = pointer.Clamp(io.Rect);
+        canvas.Circle(pos.X, pos.Y, 8, new Color(0x4F, 0xC3, 0xF7, 0xFF));
     }
 
+    /// <summary>First click selects a square; the second click moves the selected piece there (or just deselects).</summary>
+    private void OnSquareClicked((int file, int rank) square)
+    {
+        if (_selectedSquare is { } selected)
+        {
+            if (_chessGame[ToGame(selected.file, selected.rank)] != null && square != selected)
+            {
+                _chessGame.Move(ToGame(selected.file, selected.rank), ToGame(square.file, square.rank));
+            }
+            _selectedSquare = null;
+        }
+        else
+        {
+            _selectedSquare = square;
+        }
+    }
+
+
+
+    /// <summary>Chess coordinates → <see cref="ChessGame"/> index, whose row 0 is rank 8.</summary>
+    private static (int col, int row) ToGame(int file, int rank) => (file, BoardGeometry.RanksCount - 1 - rank);
+
+    // private static string[,] BuildSquareNames()
+    // {
+    //     var names = new string[BoardGeometry.Files, BoardGeometry.Ranks];
+    //     for (int file = 0; file < BoardGeometry.Files; file++)
+    //     {
+    //         for (int rank = 0; rank < BoardGeometry.Ranks; rank++)
+    //         {
+    //             names[file, rank] = FileNames[file] + RankNames[rank];
+    //         }
+    //     }
+    //     return names;
+    // }
 
     private static (int col, int row) CoordFromPiece(ChessPiece key)
     {

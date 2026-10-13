@@ -44,6 +44,8 @@ public readonly record struct Color(byte R, byte G, byte B, byte A = 0xFF)
 
         return new Color(r, g, b, a);
     }
+
+    public Color Transparent(float v) => new Color(R, G, B, (byte)(A * v));
 }
 
 

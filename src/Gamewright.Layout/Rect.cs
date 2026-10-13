@@ -28,6 +28,8 @@ public readonly record struct Rect(float X, float Y, float W, float H)
 
     public readonly Rect Inflate(float dx, float dy) => new Rect(X - dx, Y - dy, W + 2 * dx, H + 2 * dy);
 
+    public readonly Rect Deflate(float d) => Deflate(d, d);
+    
     public readonly Rect Deflate(float dx, float dy) => new Rect(X + dx, Y + dy, W - 2 * dx, H - 2 * dy);
 
     public static Rect FromCenter(Point center, Size size)

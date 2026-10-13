@@ -5,16 +5,16 @@
 <PageTitle>Chess Canvas</PageTitle>
 
 @* Blazor renders this once; after that the JS frame loop drives everything. *@
-<canvas id="surface"></canvas>
+<canvas id="surface" tabindex="0"></canvas>
 
 @code {
-    readonly Renderer _renderer = new Renderer(new ChessApp());
+  readonly Renderer _renderer = new Renderer(new ChessApp());
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-            await _renderer.StartAsync("surface");
-    }
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+      await _renderer.StartAsync("surface");
+  }
 
-    public void Dispose() => _renderer.Stop();
+  public void Dispose() => _renderer.Stop();
 }

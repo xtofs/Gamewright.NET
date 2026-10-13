@@ -42,6 +42,9 @@ export function init(canvasId, frame, imageLoaded) {
     input[7] |= buttonBit(e.button);
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("keydown", function (event) {
+    console.log("Key pressed:", event.key, "code:", event.code);
+  });
 
   running = true;
   requestAnimationFrame(tick);
