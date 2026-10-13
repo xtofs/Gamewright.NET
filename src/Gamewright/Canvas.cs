@@ -13,7 +13,8 @@ using Gamewright.Layout;
 public sealed class Canvas
 {
     // Opcodes must match the switch in canvas.js.
-    const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4, OpLine = 5, OpImage = 6;
+    const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4, OpLine = 5, OpImage = 6,
+              OpFillPolygon = 7, OpStrokePolygon = 8;
 
     float[] _buf = new float[4096];
     int _n;
@@ -201,6 +202,51 @@ public sealed class Canvas
         if (_n + count > _buf.Length)
         {
             Array.Resize(ref _buf, Math.Max(_buf.Length * 2, _n + count));
+        }
+    }
+
+    // ---- Polygons ---------------------------------------------------------------------------
+    // Variable-length commands: the point count comes right after the opcode, so the JS side knows
+    // how many operands to consume before it reaches the fixed tail (line width, color).
+    //   FillPolygon   n x0 y0 … x(n-1) y(n-1) rgba
+    //   StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
+    // The count travels as a float, which is exact for integers below 2^24.
+
+    /// <summary>Fills the closed polygon through <paramref name="points"/>. Fewer than 3 points draw nothing.</summary>
+    public void FillPolygon(ReadOnlySpan<Point> points, Color color)
+    {
+        if (points.Length < 3)
+        {
+            return;
+        }
+
+        WritePolygon(OpFillPolygon, points, tail: 1);
+        _buf[_n++] = ColorAsFloat(color);
+    }
+
+    /// <summary>Strokes the outline of the closed polygon through <paramref name="points"/>. Fewer than 2 points draw nothing.</summary>
+    public void StrokePolygon(ReadOnlySpan<Point> points, float lineWidth, Color color)
+    {
+        if (points.Length < 2)
+        {
+            return;
+        }
+
+        WritePolygon(OpStrokePolygon, points, tail: 2);
+        _buf[_n++] = lineWidth;
+        _buf[_n++] = ColorAsFloat(color);
+    }
+
+    /// <summary>Writes opcode, count and coordinates, reserving room for <paramref name="tail"/> more slots.</summary>
+    private void WritePolygon(int opcode, ReadOnlySpan<Point> points, int tail)
+    {
+        Ensure(2 + 2 * points.Length + tail);
+        _buf[_n++] = opcode;
+        _buf[_n++] = points.Length;
+        foreach (var p in points)
+        {
+            _buf[_n++] = p.X;
+            _buf[_n++] = p.Y;
         }
     }
 }

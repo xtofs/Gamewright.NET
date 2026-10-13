@@ -11,5 +11,15 @@ public record struct Point(float X, float Y)
             MathF.Max(rect.Y, MathF.Min(Y, rect.MaxY))
         );
     }
+
+    public static Point operator +(Point point, Point other)
+    {
+        return new Point(point.X + other.X, point.Y + other.Y);
+    }
+
+    public static Point operator *(Point point, float scalar)
+    {
+        return new Point(point.X * scalar, point.Y * scalar);
+    }
 }
 

@@ -123,7 +123,32 @@ function cssColor(v) {
   return `rgba(${(v >>> 24) & 255},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
 }
 
-// Opcodes must match Canvas2D.cs.
+// Reads "n x0 y0 … x(n-1) y(n-1)" starting at f[i] and builds a closed path from it.
+// Returns the index just past the last coordinate, so the caller continues with the fixed tail.
+function polygonPath(f, i) {
+  const n = f[i++];
+  ctx.beginPath();
+  ctx.moveTo(f[i], f[i + 1]);
+  for (let k = 1; k < n; k++) {
+    ctx.lineTo(f[i + 2 * k], f[i + 2 * k + 1]);
+  }
+  ctx.closePath();
+  return i + 2 * n;
+}
+
+export const OpCode = Object.freeze({
+  OpClear: 0,
+  OpRect: 1,
+  OpCircle: 2,
+  OpText: 3,
+  OpStrokeRect: 4,
+  OpLine: 5,
+  OpImage: 6,
+  OpFillPolygon: 7,
+  OpStrokePolygon: 8,
+});
+
+// Opcodes must match Canvas.cs.
 export function submit(view) {
   const bytes = view.slice(); // copy out of WASM memory (view dies after this call)
   const f = new Float32Array(
@@ -139,13 +164,13 @@ export function submit(view) {
   let i = 0;
   while (i < f.length) {
     switch (f[i++]) {
-      case 0: {
+      case OpCode.OpClear: {
         // Clear rgba
         ctx.fillStyle = cssColor(u[i++]);
         ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         break;
       }
-      case 1: {
+      case OpCode.OpRect: {
         // Rect x y w h rgba
         const x = f[i++];
         const y = f[i++];
@@ -156,7 +181,7 @@ export function submit(view) {
         ctx.fillRect(x, y, w, h);
         break;
       }
-      case 2: {
+      case OpCode.OpCircle: {
         // Circle x y r rgba
         const x = f[i++],
           y = f[i++],
@@ -167,7 +192,7 @@ export function submit(view) {
         ctx.fill();
         break;
       }
-      case 3: {
+      case OpCode.OpText: {
         // Text strId x y size rgba (centered)
         const s = strings[f[i++]],
           x = f[i++],
@@ -181,7 +206,7 @@ export function submit(view) {
         ctx.fillText(s, x, y);
         break;
       }
-      case 4: {
+      case OpCode.OpStrokeRect: {
         // StrokeRect x y w h lineWidth rgba
         const x = f[i++],
           y = f[i++],
@@ -192,7 +217,7 @@ export function submit(view) {
         ctx.strokeRect(x, y, w, h);
         break;
       }
-      case 5: {
+      case OpCode.OpLine: {
         // Line x1, y1, x2, y2 lineWidth rgba
         const x1 = f[i++],
           y1 = f[i++],
@@ -207,7 +232,7 @@ export function submit(view) {
         ctx.stroke();
         break;
       }
-      case 6: {
+      case OpCode.OpImage: {
         // Image id sx sy sw sh dx dy dw dh alpha flags (flags bit 0 = pixelated)
         const bitmap = images[f[i++]],
           sx = f[i++],
@@ -230,9 +255,24 @@ export function submit(view) {
         }
         break;
       }
+      case OpCode.OpFillPolygon: {
+        // FillPolygon n x0 y0 … x(n-1) y(n-1) rgba
+        i = polygonPath(f, i);
+        ctx.fillStyle = cssColor(u[i++]);
+        ctx.fill();
+        break;
+      }
+      case OpCode.OpStrokePolygon: {
+        // StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
+        i = polygonPath(f, i);
+        ctx.lineWidth = f[i++];
+        ctx.strokeStyle = cssColor(u[i++]);
+        ctx.stroke();
+        break;
+      }
       default:
         console.log(`Unknown opcode ${f[i - 1]} at ${i - 1}`);
-      // throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
+        throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
     }
   }
 }

@@ -1,0 +1,20 @@
+@page "/"
+@using Gamewright
+@implements IDisposable
+
+<PageTitle>Havannah Canvas</PageTitle>
+
+@* Blazor renders this once; after that the JS frame loop drives everything. *@
+<canvas id="surface" tabindex="0"></canvas>
+
+@code {
+  readonly Renderer _renderer = new Renderer(new HavannahApp());
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+      await _renderer.StartAsync("surface");
+  }
+
+  public void Dispose() => _renderer.Stop();
+}

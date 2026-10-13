@@ -49,16 +49,13 @@ public sealed class ChessApp : IImmediateApp
         // ── Draw ──
         canvas.Clear(new Color(0x20, 0x20, 0x20));
 
-
-        canvas.FillRect(geo.Board, Colors.CadetBlue);
-
         // draw the board
         canvas.DrawBoard(geo);
 
         if (_selectedSquare is { } ssq)
         {
             var color = Colors.HotPink.Transparent(.5f);
-            var rect = geo.SquareRect(ssq.file, ssq.rank).Deflate(geo.Square * .1f); // 10% smaller than the square
+            var rect = geo.SquareRect(ssq.file, ssq.rank).Deflate(geo.Square * .09f); // 10% smaller than the square
             canvas.StrokeRect(rect, io.Size.W / 100f, color);
         }
 
