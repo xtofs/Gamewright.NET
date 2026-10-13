@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "havannah", "runtimeExecutable": "dotnet", "runtimeArgs": ["run", "--project", "src/Havannah", "--no-launch-profile", "--urls", "http://localhost:5301"], "port": 5301 },
+    { "name": "chess", "runtimeExecutable": "dotnet", "runtimeArgs": ["run", "--project", "src/Chess", "--no-launch-profile", "--urls", "http://localhost:5302"], "port": 5302 }
+  ]
+}
