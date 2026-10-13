@@ -1,6 +1,11 @@
+using System.Numerics;
+using System.Runtime.InteropServices;
+
 namespace Gamewright.Layout;
 
 
+/// <summary>Four sequential floats (X, Y, W, H), so it can be copied to the command buffer as raw floats.</summary>
+[StructLayout(LayoutKind.Sequential)]
 public readonly record struct Rect(float X, float Y, float W, float H)
 {
     public Rect(Point topLeft, Size size) : this(topLeft.X, topLeft.Y, size.W, size.H) { }
@@ -16,6 +21,11 @@ public readonly record struct Rect(float X, float Y, float W, float H)
     public Point Center => new Point(X + W / 2, Y + H / 2);
 
     public Point TopLeft => new Point(X, Y);
+
+    /// <summary>True when <paramref name="p"/> lies inside; the right and bottom edges are exclusive.</summary>
+    public bool Contains(Point p) =>
+        Vector2.GreaterThanOrEqualAll((Vector2)p, (Vector2)TopLeft) &&
+        Vector2.LessThanAll((Vector2)p, new Vector2(MaxX, MaxY));
 
     // [Obsolete("Use constructor instead.")]
     // public static Rect FromPositionAndSize(float x, float y, float width, float height) => new(x, y, width, height);

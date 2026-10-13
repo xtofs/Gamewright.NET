@@ -1,4 +1,6 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Gamewright.Layout;
 
@@ -34,29 +36,33 @@ static class HexGeometry
     internal static Hexagon Corners(Point center, float hexagonCircumRadius, HexOrientation orientation)
     {
         var unit = orientation.IsPointyTop ? UnitPointyTop : UnitFlatTop;
-        return (unit * hexagonCircumRadius) + center;
+        var result = new Hexagon();
+
+        // Six points are three Vector4s of two points each: scale and translate in three steps.
+        ReadOnlySpan<Point> unitPoints = unit;
+        ReadOnlySpan<Vector4> from = MemoryMarshal.Cast<Point, Vector4>(unitPoints);
+        Span<Point> resultPoints = result;
+        Span<Vector4> to = MemoryMarshal.Cast<Point, Vector4>(resultPoints);
+        var offset = new Vector4(center.X, center.Y, center.X, center.Y);
+        for (int i = 0; i < to.Length; i++)
+        {
+            to[i] = from[i] * hexagonCircumRadius + offset;
+        }
+        return result;
     }
 
-    /// <summary>Center of <paramref name="hex"/>, relative to the center of hexagon (0, 0, 0).</summary>
-    internal static Point Center(Hex hex, float hexagonCircumradius, HexOrientation orientation)
-    {
-        var o = orientation;
-        return new Point(
-            (o.F0 * hex.Q + o.F1 * hex.R) * hexagonCircumradius,
-            (o.F2 * hex.Q + o.F3 * hex.R) * hexagonCircumradius);
-    }
+    /// <summary>Center of <paramref name="hex"/>, as a displacement from the center of hexagon (0, 0, 0).</summary>
+    internal static Vector2 Center(Hex hex, float hexagonCircumradius, HexOrientation orientation) =>
+        Vector2.Transform(new Vector2(hex.Q, hex.R), orientation.Forward) * hexagonCircumradius;
 
     /// <summary>
-    /// The hexagon containing <paramref name="offset"/> (relative to the center of hexagon (0, 0, 0)).
+    /// The hexagon containing <paramref name="offset"/> (a displacement from the center of hexagon (0, 0, 0)).
     /// Inverse of <see cref="Center"/> followed by <see cref="HexMath.Round"/>; not limited to any board.
     /// </summary>
-    internal static Hex FromPoint(Point offset, float hexagonCircumRadius, HexOrientation orientation)
+    internal static Hex FromPoint(Vector2 offset, float hexagonCircumRadius, HexOrientation orientation)
     {
-        var o = orientation;
-        var q = (o.B0 * offset.X + o.B1 * offset.Y) / hexagonCircumRadius;
-        var r = (o.B2 * offset.X + o.B3 * offset.Y) / hexagonCircumRadius;
-        var s = -q - r;
-        return HexMath.Round(q, r, s);
+        var axial = Vector2.Transform(offset / hexagonCircumRadius, orientation.Inverse);
+        return HexMath.Round(axial.X, axial.Y, -axial.X - axial.Y);
     }
 
     /// <summary>
@@ -77,25 +83,5 @@ static class HexGeometry
     internal struct Hexagon
     {
         private Point _element0;
-
-        public static Hexagon operator *(Hexagon hex, float scalar)
-        {
-            var result = new Hexagon();
-            for (int i = 0; i < 6; i++)
-            {
-                result[i] = hex[i] * scalar;
-            }
-            return result;
-        }
-
-        public static Hexagon operator +(Hexagon hex, Point point)
-        {
-            var result = new Hexagon();
-            for (int i = 0; i < 6; i++)
-            {
-                result[i] = hex[i] + point;
-            }
-            return result;
-        }
     }
 }

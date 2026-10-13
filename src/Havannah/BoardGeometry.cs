@@ -38,7 +38,7 @@ public readonly record struct BoardGeometry(Rect Bounds, int Radius, bool IsBoar
             return false;   // nothing laid out yet (or zero-sized bounds)
         }
 
-        var offset = new Point(point.X - Center.X, point.Y - Center.Y);
+        var offset = point - Center;
         hex = HexGeometry.FromPoint(offset, HexagonCircumRadius, Orientation);
         return HexMath.IsOnBoard(hex, Radius);
     }

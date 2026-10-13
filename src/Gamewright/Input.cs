@@ -17,8 +17,7 @@ public readonly record struct Input(
 
 
 
-    public bool IsInside(Rect r) =>
-            MouseX >= r.X && MouseX < r.MaxX && MouseY >= r.Y && MouseY < r.MaxY;
+    public bool IsInside(Rect r) => r.Contains(new Point(MouseX, MouseY));
 
 
     public Size Size => new Size(Width, Height);

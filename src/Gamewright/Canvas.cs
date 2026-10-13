@@ -1,5 +1,6 @@
 namespace Gamewright;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Gamewright.Layout;
@@ -15,6 +16,13 @@ public sealed class Canvas
     // Opcodes must match the switch in canvas.js.
     const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4, OpLine = 5, OpImage = 6,
               OpFillPolygon = 7, OpStrokePolygon = 8;
+
+    static Canvas()
+    {
+        // Rects and points are copied into the float buffer as raw memory.
+        System.Diagnostics.Debug.Assert(Unsafe.SizeOf<Rect>() == 4 * sizeof(float));
+        System.Diagnostics.Debug.Assert(Unsafe.SizeOf<Point>() == 2 * sizeof(float));
+    }
 
     float[] _buf = new float[4096];
     int _n;
@@ -39,10 +47,7 @@ public sealed class Canvas
     {
         Ensure(6);
         _buf[_n++] = OpRect;
-        _buf[_n++] = rect.X;
-        _buf[_n++] = rect.Y;
-        _buf[_n++] = rect.W;
-        _buf[_n++] = rect.H;
+        Write(rect);
         _buf[_n++] = ColorAsFloat(color);
     }
 
@@ -50,10 +55,7 @@ public sealed class Canvas
     {
         Ensure(7);
         _buf[_n++] = OpStrokeRect;
-        _buf[_n++] = rect.X;
-        _buf[_n++] = rect.Y;
-        _buf[_n++] = rect.W;
-        _buf[_n++] = rect.H;
+        Write(rect);
         _buf[_n++] = lineWidth;
         _buf[_n++] = ColorAsFloat(color);
     }
@@ -153,14 +155,8 @@ public sealed class Canvas
         Ensure(12);
         _buf[_n++] = OpImage;
         _buf[_n++] = image.Id;
-        _buf[_n++] = source.X;
-        _buf[_n++] = source.Y;
-        _buf[_n++] = source.W;
-        _buf[_n++] = source.H;
-        _buf[_n++] = dest.X;
-        _buf[_n++] = dest.Y;
-        _buf[_n++] = dest.W;
-        _buf[_n++] = dest.H;
+        Write(source);
+        Write(dest);
         _buf[_n++] = Math.Clamp(alpha, 0f, 1f);
         _buf[_n++] = pixelated ? 1f : 0f;   // flags: bit 0 = pixelated
     }
@@ -195,6 +191,13 @@ public sealed class Canvas
             NewStrings.Add((id, s));
         }
         return id;
+    }
+
+    /// <summary>Appends the four floats X, Y, W, H. The caller has already called <see cref="Ensure"/>.</summary>
+    private void Write(Rect rect)
+    {
+        MemoryMarshal.Cast<float, Rect>(_buf.AsSpan(_n, 4))[0] = rect;
+        _n += 4;
     }
 
     private void Ensure(int count)
@@ -243,10 +246,8 @@ public sealed class Canvas
         Ensure(2 + 2 * points.Length + tail);
         _buf[_n++] = opcode;
         _buf[_n++] = points.Length;
-        foreach (var p in points)
-        {
-            _buf[_n++] = p.X;
-            _buf[_n++] = p.Y;
-        }
+        var floats = MemoryMarshal.Cast<Point, float>(points);
+        floats.CopyTo(_buf.AsSpan(_n));
+        _n += floats.Length;
     }
 }

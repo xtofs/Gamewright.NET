@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace Gamewright;
@@ -24,28 +25,23 @@ public readonly record struct Color(byte R, byte G, byte B, byte A = 0xFF)
             (byte)value);
     }
 
-    public Color Darken(float v)
+    private Vector4 ToVector4() => new(R, G, B, A);
+
+    private static Color FromVector4(Vector4 v)
     {
-        var (r, g, b, a) = this;
-
-        r = (byte)(r * (1 - v));
-        g = (byte)(g * (1 - v));
-        b = (byte)(b * (1 - v));
-
-        return new Color(r, g, b, a);
-    }
-    public Color Lighten(float v)
-    {
-        var (r, g, b, a) = this;
-
-        r = (byte)(r * v);
-        g = (byte)(g * v);
-        b = (byte)(b * v);
-
-        return new Color(r, g, b, a);
+        v = Vector4.Clamp(v, Vector4.Zero, new Vector4(255f));
+        return new Color((byte)v.X, (byte)v.Y, (byte)v.Z, (byte)v.W);
     }
 
-    public Color Transparent(float v) => new Color(R, G, B, (byte)(A * v));
+    /// <summary>Scales the RGB channels by 1 − <paramref name="v"/>; alpha is kept.</summary>
+    public Color Darken(float v) => Scale(1 - v);
+
+    /// <summary>Scales the RGB channels by <paramref name="v"/>, saturating at 255; alpha is kept.</summary>
+    public Color Lighten(float v) => Scale(v);
+
+    private Color Scale(float factor) => FromVector4(ToVector4() * new Vector4(factor, factor, factor, 1f));
+
+    public Color Transparent(float v) => FromVector4(ToVector4() * new Vector4(1f, 1f, 1f, v));
 }
 
 
