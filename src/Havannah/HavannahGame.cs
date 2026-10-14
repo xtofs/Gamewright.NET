@@ -13,6 +13,8 @@ public class HavannahGame(int radius = 8)
     /// </summary>
     public int Radius { get; } = radius;
 
+    public HexGrid<HavannahPiece> Grid => _grid;
+
     /// <summary>
     /// flat array of hexagonal cell contents, indexed by the hexagon's index. <see cref="Hex.Index"/>
     /// </summary>

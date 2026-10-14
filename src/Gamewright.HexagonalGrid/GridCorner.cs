@@ -30,7 +30,8 @@ static class GridCornerExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(corner), corner, null)
         };
 
-        public float DegreesFromUp() => corner switch
+        /// <summary>Compass bearing in radians: clockwise from up (12 o'clock), like a watch hand.</summary>
+        public float Bearing() => corner switch
         {
             GridCorner.OneOClock => 1 * ThirtyDegrees,
             GridCorner.ThreeOClock => 3 * ThirtyDegrees,

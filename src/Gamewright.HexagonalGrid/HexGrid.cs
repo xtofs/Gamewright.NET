@@ -14,7 +14,6 @@ public class HexGrid<T> where T : struct
 {
     private readonly Cell[] _cells;
 
-
     public int Radius { get; }
 
     public int Count { get; }
@@ -31,6 +30,16 @@ public class HexGrid<T> where T : struct
             // initialize the cell at this index.             
             _cells[index] = Cell.Create(hex, radius);
         }
+    }
+
+    public bool TryGetCorner(Hex hex, out GridCorner corner)
+    {
+        return _cells[hex.Index].TryGetCorner(out corner);
+    }
+
+    public bool TryGetEdge(Hex hex, out GridEdge edge)
+    {
+        return _cells[hex.Index].TryGetEdge(out edge);
     }
 
     /// <summary>
@@ -52,36 +61,38 @@ public class HexGrid<T> where T : struct
         internal static Cell Create(Hex hex, int radius)
         {
             NeighborSet neighbors = HexMath.CreateNeighborSet(hex, radius);
+            Console.WriteLine($"creating neighbors for hex {hex.Index}: {neighbors:X}");
             return new Cell(false, neighbors);
         }
 
-        // public readonly bool TryGetCorner(out GridCorner corner)
-        // {
-        //     switch (Neighbors.Inverse)
-        //     {
-        //         case NeighborSet.NineOClock | NeighborSet.ElevenOClock | NeighborSet.OneOClock:
-        //             corner = GridCorner.ElevenOClock;
-        //             return true;
-        //         case NeighborSet.ElevenOClock | NeighborSet.OneOClock | NeighborSet.ThreeOClock:
-        //             corner = GridCorner.OneOClock;
-        //             return true;
-        //         case NeighborSet.OneOClock | NeighborSet.ThreeOClock | NeighborSet.FiveOClock:
-        //             corner = GridCorner.ThreeOClock;
-        //             return true;
-        //         case NeighborSet.ThreeOClock | NeighborSet.FiveOClock | NeighborSet.SevenOClock:
-        //             corner = GridCorner.FiveOClock;
-        //             return true;
-        //         case NeighborSet.FiveOClock | NeighborSet.SevenOClock | NeighborSet.NineOClock:
-        //             corner = GridCorner.SevenOClock;
-        //             return true;
-        //         case NeighborSet.SevenOClock | NeighborSet.NineOClock | NeighborSet.ElevenOClock:
-        //             corner = GridCorner.NineOClock;
-        //             return true;
-        //         default:
-        //             corner = default;
-        //             return false;
-        //     }
-        // }
+        public readonly bool TryGetCorner(out GridCorner corner)
+        {
+            // Console.WriteLine($"testing neighbors for corner {Neighbors:X}, {Neighbors.Inverse:X}");
+            switch (Neighbors.Inverse)
+            {
+                case NeighborSet.NineOClock | NeighborSet.ElevenOClock | NeighborSet.OneOClock:
+                    corner = GridCorner.ElevenOClock;
+                    return true;
+                case NeighborSet.ElevenOClock | NeighborSet.OneOClock | NeighborSet.ThreeOClock:
+                    corner = GridCorner.OneOClock;
+                    return true;
+                case NeighborSet.OneOClock | NeighborSet.ThreeOClock | NeighborSet.FiveOClock:
+                    corner = GridCorner.ThreeOClock;
+                    return true;
+                case NeighborSet.ThreeOClock | NeighborSet.FiveOClock | NeighborSet.SevenOClock:
+                    corner = GridCorner.FiveOClock;
+                    return true;
+                case NeighborSet.FiveOClock | NeighborSet.SevenOClock | NeighborSet.NineOClock:
+                    corner = GridCorner.SevenOClock;
+                    return true;
+                case NeighborSet.SevenOClock | NeighborSet.NineOClock | NeighborSet.ElevenOClock:
+                    corner = GridCorner.NineOClock;
+                    return true;
+                default:
+                    corner = default;
+                    return false;
+            }
+        }
 
         public readonly bool TryGetEdge(out GridEdge edge)
         {
@@ -217,47 +228,5 @@ public class HexGrid<T> where T : struct
         : throw new ArgumentOutOfRangeException(nameof(hex), hex, $"Not within a grid of radius {Radius}.");
 
 
-    public bool Contains(Hex hex) => HexMath.IsWithin(hex, Radius);
-
-    // public bool IsCorner(Hex hex, [MaybeNullWhen(false)] out GridCorner dir)
-    // {
-    //     var ix = hex.Index;
-    //     dir = default!;
-    //     flags = _cells[ix].
-    // }
-
-    // public bool IsEdge(Hex hex, [MaybeNullWhen(false)] out GridEdge dir)
-    // {
-    //     var ix = hex.Index;
-    //     dir = default!;
-    //     return _edgeMask[ix] != 0;
-    // }
-
-    // public GridLocationKind GetKind(Hex hex)
-    // {
-    //     var ix = hex.Index;
-    //     var (c, e) = (_cornerMask[ix], _edgeMask[ix]);
-    //     var kind = (c, e) switch
-    //     {
-    //         (0, 0) => GridLocationKind.Inner,
-    //         (_, 0) => GridLocationKind.Corner,
-    //         (0, _) => GridLocationKind.Edge,
-    //         _ => throw new InvalidOperationException("Unexpected corner/edge mask combination")
-    //     };
-    //     return kind;
-    // }
-}
-static class BitHelper
-{
-    public static void SetBit(this ref ushort flags, int bitOffset, bool value)
-    {
-        if (value)
-        {
-            flags |= (ushort)(1 << bitOffset);
-        }
-        else
-        {
-            flags &= unchecked((ushort)~(1 << bitOffset));
-        }
-    }
+    public bool Contains(Hex hex) => HexMath.IsOnBoard(hex, Radius);
 }

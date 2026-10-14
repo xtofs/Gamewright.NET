@@ -60,6 +60,10 @@ public sealed class Canvas
         _buf[_n++] = ColorAsFloat(color);
     }
 
+    public void Line(Point p1, Point p2, float lineWidth, Color color) =>
+        Line(p1.X, p1.Y, p2.X, p2.Y, lineWidth, color);
+
+
     public void Line(float x1, float y1, float x2, float y2, float lineWidth, Color color)
     {
         Ensure(7);
@@ -69,6 +73,8 @@ public sealed class Canvas
         _buf[_n++] = ColorAsFloat(color);
     }
 
+    public void Circle(Point center, float r, Color color)
+        => Circle(center.X, center.Y, r, color);
 
     public void Circle(float x, float y, float r, Color color)
     {

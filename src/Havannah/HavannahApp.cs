@@ -17,11 +17,6 @@ public sealed class HavannahApp : IImmediateApp
     private static readonly Color CellOutline = BoardBackground;
     private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.59987f, s: 0.013f);
 
-    // Color.FromPacked(0x808088FF),
-    // Color.FromPacked(0x808880FF),
-    // Color.FromPacked(0x888080FF),
-    // Color.FromPacked(0x888888FF)
-
     private SpriteAtlas<HavannahPiece> _pieces = default!; // Sprite atlas for game pieces loaded in LoadResources
 
     public HavannahApp()
@@ -43,13 +38,6 @@ public sealed class HavannahApp : IImmediateApp
             {
                 HavannahPiece.Red => (0, 0),
                 HavannahPiece.Blue => (2, 0),
-                // GamePiece.White => (3, 0),
-                // GamePiece.Black => (4, 0),
-                // GamePiece.RedMatt => (0, 1),
-                // GamePiece.GreenMatt => (1, 1),
-                // GamePiece.BlueMatt => (2, 1),
-                // GamePiece.WhiteMatt => (3, 1),
-                // GamePiece.BlackMatt => (4, 1),
                 _ => throw new ArgumentOutOfRangeException(nameof(piece), piece, null),
             };
         }
@@ -65,12 +53,10 @@ public sealed class HavannahApp : IImmediateApp
         var pointer = new Point(io.MouseX, io.MouseY);
 
         // ── Input ──
-        // A click selects a hexagon; clicking it again deselects it. Clicks off the board are ignored.
         if (io.PrimaryPressed)
         {
             if (geo.TryGetHex(pointer, out var clicked) && _game[clicked] == null)
             {
-                // _selected = _selected == clicked ? null : clicked;
                 _game.Play(clicked);
             }
         }
@@ -80,21 +66,48 @@ public sealed class HavannahApp : IImmediateApp
 
         foreach (var hex in geo.GridHexes)
         {
+            var center = geo.HexCenter(hex);
             var corners = geo.HexCorners(hex);
             canvas.FillPolygon(corners, CellColors[hex.ColorClass]);
             canvas.StrokePolygon(corners, 1.5f, CellOutline);
 
+            if (_game.Grid.TryGetCorner(hex, out var corner))
+            {
+                canvas.Circle(center, 20, Colors.IndianRed);
+                var angle = corner.Bearing();
+                // var label = edge.ToString().StripSuffix("OClock") ;
+                var label = $"{float.RadiansToDegrees(angle):F0}°";
+                canvas.Text(label, center, 12, Colors.Black);
+                var e = center + 20 * Compass(angle);
+                canvas.Line(center, e, 3, Colors.Black);
+            }
+            if (_game.Grid.TryGetEdge(hex, out var edge))
+            {
+                canvas.Circle(center, 20, Colors.OrangeRed);
+
+                var angle = edge.Bearing();
+                // var label = edge.ToString().StripSuffix("OClock") ;
+                var label = $"{float.RadiansToDegrees(angle):F0}°";
+                canvas.Text(label, center, 12, Colors.Black);
+                var e = center + 20 * Compass(angle);
+                canvas.Line(center, e, 3, Colors.Black);
+            }
+
+
             if (_game[hex] is { } piece)
             {
-                var center = geo.HexCenter(hex);
-                // canvas.Circle(center.X, center.Y, geo.HexagonCircumRadius * 0.6f, PieceColor(piece));
                 var rect = Rect.FromCenter(center, Size.Square(geo.HexagonCircumRadius * 1.6f));
 
                 var sprite = _pieces[piece];
                 canvas.DrawSprite(sprite, rect);
             }
+
         }
     }
+
+    /// <summary>Unit vector for a compass bearing (radians clockwise from up; screen y points down).</summary>
+    private static Displacement Compass(float bearing) =>
+        new(MathF.Sin(bearing), -MathF.Cos(bearing));
 
     private static Color PieceColor(HavannahPiece piece) => piece switch
     {
@@ -102,4 +115,19 @@ public sealed class HavannahApp : IImmediateApp
         HavannahPiece.Blue => Colors.RoyalBlue,
         _ => throw new ArgumentOutOfRangeException(nameof(piece), piece, null),
     };
+}
+
+static class StringExtensions
+{
+    extension(string str)
+    {
+        public string StripSuffix(string suffix)
+        {
+            if (str.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return str.Substring(0, str.Length - suffix.Length);
+            }
+            return str;
+        }
+    }
 }

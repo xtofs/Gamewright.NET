@@ -46,12 +46,12 @@ public static class NeighborSetExtensions
 
         public HexOffset Direction => neighbor switch
         {
-            HexNeighbor.OneOClock => new HexOffset(1, 0, -1),
-            HexNeighbor.ThreeOClock => new HexOffset(1, -1, 0),
-            HexNeighbor.FiveOClock => new HexOffset(0, -1, 1),
-            HexNeighbor.SevenOClock => new HexOffset(-1, 0, 1),
-            HexNeighbor.NineOClock => new HexOffset(-1, 1, 0),
-            HexNeighbor.ElevenOClock => new HexOffset(0, 1, -1),
+            HexNeighbor.OneOClock => new HexOffset(1, -1, 0),
+            HexNeighbor.ThreeOClock => new HexOffset(1, 0, -1),
+            HexNeighbor.FiveOClock => new HexOffset(0, 1, -1),
+            HexNeighbor.SevenOClock => new HexOffset(-1, 1, 0),
+            HexNeighbor.NineOClock => new HexOffset(-1, 0, 1),
+            HexNeighbor.ElevenOClock => new HexOffset(0, -1, 1),
             _ => throw new ArgumentOutOfRangeException(nameof(neighbor), "Invalid hex neighbor")
         };
     }

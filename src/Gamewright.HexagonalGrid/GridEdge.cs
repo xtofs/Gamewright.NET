@@ -30,7 +30,8 @@ static class GridEdgeExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(Edge), Edge, null)
         };
 
-        public float DegreesFromUp() => Edge switch
+        /// <summary>Compass bearing in radians: clockwise from up (12 o'clock), like a watch hand.</summary>
+        public float Bearing() => Edge switch
         {
             GridEdge.TwelveOClock => 0 * ThirtyDegrees,
             GridEdge.TwoOClock => 2 * ThirtyDegrees,

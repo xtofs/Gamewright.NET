@@ -114,9 +114,6 @@ public static class HexMath
         }
     }
 
-    /// <summary>True when <paramref name="hex"/> lies on a board of the given radius (see <see cref="HexagonCount"/>).</summary>
-    public static bool IsOnBoard(Hex hex, int radius) => RingOfCube(hex) < radius;
-
     /// <summary>
     /// Rounds fractional axial coordinates to the nearest hexagon. Rounds q, r and s independently, then
     /// recomputes the one with the largest rounding error from the other two, so q + r + s = 0 holds.
@@ -158,7 +155,7 @@ public static class HexMath
         foreach (var neighbor in HexNeighbor.All)
         {
             var neighborHex = hex + neighbor.Direction;
-            if (HexMath.IsWithin(neighborHex, radius)) { neighbors.Add(neighbor); }
+            if (HexMath.IsOnBoard(neighborHex, radius)) { neighbors = neighbors.Add(neighbor); }
         }
 
         return neighbors;
@@ -251,8 +248,14 @@ public static class HexMath
     //     }
     // }
 
+    [Obsolete("Use IsOnBoard instead.")]
     internal static bool IsWithin(Hex hex, int radius)
     {
         return hex.Ring <= radius;
     }
+
+
+    /// <summary>True when <paramref name="hex"/> lies on a board of the given radius (see <see cref="HexagonCount"/>).</summary>
+    public static bool IsOnBoard(Hex hex, int radius) => RingOfCube(hex) < radius;
+
 }
