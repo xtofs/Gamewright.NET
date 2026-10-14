@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Gamewright.Primitives/Gamewright.Primitives.csproj" />
+    <ProjectReference Include="../Gamewright.SquareGrid/Gamewright.SquareGrid.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Gamewright.HexagonalGrid;
+namespace Gamewright.Primitives;
 
 public static class BijectiveBase26
 {

@@ -48,3 +48,18 @@ public class AlgebraTests
         Assert.Equal(new Point(5, 5), r.Center);
     }
 }
+
+public class BijectiveBase26Tests
+{
+    [Theory]
+    [InlineData(1, "a")]
+    [InlineData(26, "z")]
+    [InlineData(27, "aa")]
+    [InlineData(702, "zz")]
+    [InlineData(703, "aaa")]
+    public void EncodesAndDecodes(long n, string s)
+    {
+        Assert.Equal(s, BijectiveBase26.Encode(n));
+        Assert.Equal(n, BijectiveBase26.Decode(s));
+    }
+}

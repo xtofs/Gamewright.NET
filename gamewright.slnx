@@ -3,9 +3,11 @@
   <Folder Name="/src/">
     <Project Path="src/Gamewright.HexagonalGrid/Gamewright.HexagonalGrid.csproj" />
     <Project Path="src/Gamewright.Primitives/Gamewright.Primitives.csproj" />
+    <Project Path="src/Gamewright.SquareGrid/Gamewright.SquareGrid.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Gamewright.Primitives.Tests/Gamewright.Primitives.Tests.csproj" />
+    <Project Path="tests/Gamewright.SquareGrid.Tests/Gamewright.SquareGrid.Tests.csproj" />
     <Project Path="tests/Gamewright.HexagonalGrid.Tests/Gamewright.HexagonalGrid.Tests.csproj" />
   </Folder>
   <Project Path="src/Chess/Chess.csproj" />

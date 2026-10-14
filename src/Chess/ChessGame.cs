@@ -2,6 +2,9 @@ namespace Chess;
 
 public class ChessGame
 {
+    public const int Files = 8;
+    public const int Ranks = 8;
+
     private readonly ChessPiece?[,] _state = new ChessPiece?[,]{
         {ChessPiece.BlackRook, ChessPiece.BlackKnight, ChessPiece.BlackBishop, ChessPiece.BlackQueen, ChessPiece.BlackKing, ChessPiece.BlackBishop, ChessPiece.BlackKnight, ChessPiece.BlackRook},
         {ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn, ChessPiece.BlackPawn},

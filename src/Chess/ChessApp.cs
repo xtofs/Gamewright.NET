@@ -1,5 +1,6 @@
 using Gamewright;
 using Gamewright.Layout;
+using Gamewright.SquareGrid;
 
 namespace Chess;
 
@@ -10,17 +11,17 @@ public sealed class ChessApp : IImmediateApp
 {
     private readonly ChessGame _chessGame;
 
-    private readonly Checkerboard _board;
+    private readonly SquareBoardNode _board;
 
-    /// <summary>Selected square in chess coordinates (file 0 = a, rank 0 = 1).</summary>
-    private (int file, int rank)? _selectedSquare;
+    /// <summary>Selected square in board coordinates (column 0 = file a, row 0 = rank 1).</summary>
+    private Square? _selectedSquare;
 
     // Canvas.Text interns strings, so build every label once instead of once per frame.
 
     public ChessApp()
     {
         _chessGame = new ChessGame();
-        _board = new Checkerboard { Margin = 5 };
+        _board = new SquareBoardNode { Columns = ChessGame.Files, Rows = ChessGame.Ranks, Margin = 5 };
     }
 
     private SpriteAtlas<ChessPiece> _pieces = null!;   // created in LoadResources, before the first frame
@@ -50,25 +51,21 @@ public sealed class ChessApp : IImmediateApp
         canvas.Clear(new Color(0x20, 0x20, 0x20));
 
         // draw the board
-        canvas.DrawBoard(geo);
+        canvas.DrawSquareBoard(geo, light: Colors.LightGray, dark: Colors.DarkGray);
 
         if (_selectedSquare is { } ssq)
         {
             var color = Colors.HotPink.Transparent(.5f);
-            var rect = geo.SquareRect(ssq.file, ssq.rank).Deflate(geo.Square * .09f); // 10% smaller than the square
+            var rect = geo.SquareRect(ssq).Deflate(geo.SquareSize * .09f); // 10% smaller than the square
             canvas.StrokeRect(rect, io.Size.W / 100f, color);
         }
 
         // Draw the pieces on the board.
-        for (int file = 0; file < BoardGeometry.FilesCount; file++)
+        foreach (var square in geo.AllSquares)
         {
-            for (int rank = 0; rank < BoardGeometry.RanksCount; rank++)
+            if (_chessGame[ToGame(square)] is { } piece)
             {
-                if (_chessGame[ToGame(file, rank)] is { } piece)
-                {
-                    var rect = geo.SquareRect(file, rank);
-                    canvas.DrawSprite(_pieces[piece], rect);
-                }
+                canvas.DrawSprite(_pieces[piece], geo.SquareRect(square));
             }
         }
 
@@ -78,13 +75,13 @@ public sealed class ChessApp : IImmediateApp
     }
 
     /// <summary>First click selects a square; the second click moves the selected piece there (or just deselects).</summary>
-    private void OnSquareClicked((int file, int rank) square)
+    private void OnSquareClicked(Square square)
     {
         if (_selectedSquare is { } selected)
         {
-            if (_chessGame[ToGame(selected.file, selected.rank)] != null && square != selected)
+            if (_chessGame[ToGame(selected)] != null && square != selected)
             {
-                _chessGame.Move(ToGame(selected.file, selected.rank), ToGame(square.file, square.rank));
+                _chessGame.Move(ToGame(selected), ToGame(square));
             }
             _selectedSquare = null;
         }
@@ -94,23 +91,8 @@ public sealed class ChessApp : IImmediateApp
         }
     }
 
-
-
-    /// <summary>Chess coordinates → <see cref="ChessGame"/> index, whose row 0 is rank 8.</summary>
-    private static (int col, int row) ToGame(int file, int rank) => (file, BoardGeometry.RanksCount - 1 - rank);
-
-    // private static string[,] BuildSquareNames()
-    // {
-    //     var names = new string[BoardGeometry.Files, BoardGeometry.Ranks];
-    //     for (int file = 0; file < BoardGeometry.Files; file++)
-    //     {
-    //         for (int rank = 0; rank < BoardGeometry.Ranks; rank++)
-    //         {
-    //             names[file, rank] = FileNames[file] + RankNames[rank];
-    //         }
-    //     }
-    //     return names;
-    // }
+    /// <summary>Board coordinates → <see cref="ChessGame"/> index, whose row 0 is rank 8.</summary>
+    private static (int col, int row) ToGame(Square square) => (square.Column, ChessGame.Ranks - 1 - square.Row);
 
     private static (int col, int row) CoordFromPiece(ChessPiece key)
     {
