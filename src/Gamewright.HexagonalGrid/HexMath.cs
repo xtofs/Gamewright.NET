@@ -151,123 +151,108 @@ public static class HexMath
         }
     }
 
-    /// <summary>
-    /// Determines if the hexagon is a grid corner of the grid with the given radius.
-    /// </summary>
-    /// <param name="radius"></param>
-    /// <param name="corner"></param>
-    /// <returns></returns>
-    public static bool IsCorner(Hex hex, int radius, [MaybeNullWhen(false)] out GridCornerDirection corner)
-    {
-        // corners are determined by which components have 
-        // absolute value equal to the radius and their signs.
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
-        // convert the coordinates to -1, 0, or 1 based on whether they are on the radius boundary
-        // this allows to compare to constants in the switch statement below.
-        var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
-        var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
-        var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
-        // for corners, and only for corners, q, r, s is not a permutation of 1, 0, -1 
 
-        switch (q, r, s)
+    public static NeighborSet CreateNeighborSet(Hex hex, int radius)
+    {
+        var neighbors = new NeighborSet();
+        foreach (var neighbor in HexNeighbor.All)
         {
-            case (-1, 0, 1):
-                corner = GridCornerDirection.NorthWest;
-                return true;
-            case (0, -1, 1):
-                corner = GridCornerDirection.NorthEast;
-                return true;
-            case (1, -1, 0):
-                corner = GridCornerDirection.East;
-                return true;
-            case (1, 0, -1):
-                corner = GridCornerDirection.SouthEast;
-                return true;
-            case (0, 1, -1):
-                corner = GridCornerDirection.SouthWest;
-                return true;
-            case (-1, 1, 0):
-                corner = GridCornerDirection.West;
-                return true;
-            default:
-                corner = (GridCornerDirection)(-1);
-                return false;
+            var neighborHex = hex + neighbor.Direction;
+            if (HexMath.IsWithin(neighborHex, radius)) { neighbors.Add(neighbor); }
         }
+
+        return neighbors;
     }
 
+    // /// <summary>
+    // /// Determines if the hexagon is a grid corner of the grid with the given radius.
+    // /// </summary>
+    // /// <param name="radius"></param>
+    // /// <param name="corner"></param>
+    // /// <returns></returns>
+    // public static bool IsCorner(Hex hex, int radius, [MaybeNullWhen(false)] out GridCorner corner)
+    // {
+    //     // corners are determined by which components have 
+    //     // absolute value equal to the radius and their signs.
+    //     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
+    //     // convert the coordinates to -1, 0, or 1 based on whether they are on the radius boundary
+    //     // this allows to compare to constants in the switch statement below.
+    //     var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
+    //     var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
+    //     var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
+    //     // for corners, and only for corners, q, r, s is not a permutation of 1, 0, -1 
 
-    /// <summary>
-    /// Determines if the hexagon is on an edge of the hexagonal grid with the given radius.
-    /// Returns true if the hexagon is on an edge of the grid, and sets the corresponding edge direction.
-    /// </summary>
-    /// <param name="radius"></param>
-    /// <param name="edge"></param>
-    /// <returns></returns>
-    public static bool IsEdge(Hex hex, int radius, [MaybeNullWhen(false)] out GridEdgeDirection edge)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
-        // the edge is determined by the sign of the component that has 
-        // the absolute value equal to the radius.
+    //     switch (q, r, s)
+    //     {
+    //         case (-1, 0, 1):
+    //             corner = GridCorner.NorthWest;
+    //             return true;
+    //         case (0, -1, 1):
+    //             corner = GridCorner.NorthEast;
+    //             return true;
+    //         case (1, -1, 0):
+    //             corner = GridCorner.East;
+    //             return true;
+    //         case (1, 0, -1):
+    //             corner = GridCorner.SouthEast;
+    //             return true;
+    //         case (0, 1, -1):
+    //             corner = GridCorner.SouthWest;
+    //             return true;
+    //         case (-1, 1, 0):
+    //             corner = GridCorner.West;
+    //             return true;
+    //         default:
+    //             corner = (GridCorner)(-1);
+    //             return false;
+    //     }
+    // }
 
-        var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
-        var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
-        var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
-        switch (q, r, s)
-        {
-            case (-1, 0, 0):
-                edge = GridEdgeDirection.NorthWest;
-                return true;
-            case (1, 0, 0):
-                edge = GridEdgeDirection.SouthEast;
-                return true;
-            case (0, -1, 0):
-                edge = GridEdgeDirection.NorthEast;
-                return true;
-            case (0, 1, 0):
-                edge = GridEdgeDirection.SouthWest;
-                return true;
-            case (0, 0, 1):
-                edge = GridEdgeDirection.North;
-                return true;
-            case (0, 0, -1):
-                edge = GridEdgeDirection.South;
-                return true;
-            default:
-                edge = (GridEdgeDirection)(-1);
-                return false;
-        }
-    }
+
+    // /// <summary>
+    // /// Determines if the hexagon is on an edge of the hexagonal grid with the given radius.
+    // /// Returns true if the hexagon is on an edge of the grid, and sets the corresponding edge direction.
+    // /// </summary>
+    // /// <param name="radius"></param>
+    // /// <param name="edge"></param>
+    // /// <returns></returns>
+    // public static bool IsEdge(Hex hex, int radius, [MaybeNullWhen(false)] out GridEdge edge)
+    // {
+    //     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
+    //     // the edge is determined by the sign of the component that has 
+    //     // the absolute value equal to the radius.
+
+    //     var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
+    //     var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
+    //     var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
+    //     switch (q, r, s)
+    //     {
+    //         case (-1, 0, 0):
+    //             edge = GridEdge.NorthWest;
+    //             return true;
+    //         case (1, 0, 0):
+    //             edge = GridEdge.SouthEast;
+    //             return true;
+    //         case (0, -1, 0):
+    //             edge = GridEdge.NorthEast;
+    //             return true;
+    //         case (0, 1, 0):
+    //             edge = GridEdge.SouthWest;
+    //             return true;
+    //         case (0, 0, 1):
+    //             edge = GridEdge.North;
+    //             return true;
+    //         case (0, 0, -1):
+    //             edge = GridEdge.South;
+    //             return true;
+    //         default:
+    //             edge = (GridEdge)(-1);
+    //             return false;
+    //     }
+    // }
 
     internal static bool IsWithin(Hex hex, int radius)
     {
         return hex.Ring <= radius;
     }
-}
-
-
-/// <summary>
-/// Represents a corner of the pointy-top hexagon hexagonal board .
-/// The enum uses the 2nd order cardinal directions (NW, SE, ...) for naming 
-/// the direction the corner is facing, even though they are not exactly 
-/// in the 45-degree increments cardinal directions indicate.
-/// </summary>
-public enum GridCornerDirection
-{
-    NorthWest, NorthEast, East, SouthEast, SouthWest, West
-}
-
-/// <summary>
-/// Represents an edge of the pointy-top hexagon hexagonal board .
-/// The enum uses the 2nd order cardinal directions (NW, SE, ...) 
-/// for naming the direction the edge is facing, even though they are 
-/// not exactly in the 45-degree increments cardinal directions indicate.
-/// </summary>
-public enum GridEdgeDirection
-{
-    North = 0,
-    NorthEast = 1,
-    SouthEast = 2,
-    South = 3,
-    SouthWest = 4,
-    NorthWest = 5
 }

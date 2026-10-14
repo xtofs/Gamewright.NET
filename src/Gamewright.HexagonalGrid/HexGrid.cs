@@ -1,11 +1,5 @@
 namespace Gamewright.HexagonalGrid;
 
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-
 
 /// <summary>
 /// A "circular" hexagonal grid representation made from pointy-top hexagons.
@@ -19,8 +13,7 @@ using System.Runtime.InteropServices;
 public class HexGrid<T> where T : struct
 {
     private readonly Cell[] _cells;
-    readonly ushort[] _edgeMask;
-    readonly ushort[] _cornerMask;
+
 
     public int Radius { get; }
 
@@ -32,38 +25,13 @@ public class HexGrid<T> where T : struct
         Count = HexMath.HexagonCount(radius);
 
         _cells = new Cell[Count];
-        _edgeMask = new ushort[Count];
-        _cornerMask = new ushort[Count];
 
         foreach (var (hex, index) in HexMath.EnumerateHexes(radius))
         {
-            if (HexMath.IsCorner(hex, radius, out var corner))
-            {
-                var bitIndex = (int)corner;
-                _cornerMask[index] |= (ushort)(1 << bitIndex);
-            }
-
-            if (HexMath.IsEdge(hex, radius, out var edge))
-            {
-                var bitIndex = (int)edge;
-                _edgeMask[index] |= (ushort)(1 << bitIndex);
-            }
-
-            // initialize the cell at this index. 
-            // Might be redundant since the default already sets Occupance to false and Content to default(T)
-            _cells[index] = new Cell();
-            var cell = _cells[index];
-
-            // neighbors outside the grid are left out
-            ref var neighbors = ref _cells[index].Neighbors;
-            foreach (var direction in Direction.AllDirections())
-            {
-                var neighbor = hex + direction;
-                if (HexMath.IsWithin(neighbor, radius)) { neighbors.Add((short)neighbor.Index); }
-            }
+            // initialize the cell at this index.             
+            _cells[index] = Cell.Create(hex, radius);
         }
     }
-
 
     /// <summary>
     /// Represents a single cell within the hexagonal grid. Contains occupancy status, content, and neighbor information.
@@ -71,11 +39,84 @@ public class HexGrid<T> where T : struct
     /// </summary>
     public struct Cell
     {
+
+        private Cell(bool Occupied, NeighborSet neighbors)
+        {
+            IsOccupied = Occupied;
+            Neighbors = neighbors;
+        }
         public bool IsOccupied { get; set; }
+
+        public readonly NeighborSet Neighbors { get; }
+
+        internal static Cell Create(Hex hex, int radius)
+        {
+            NeighborSet neighbors = HexMath.CreateNeighborSet(hex, radius);
+            return new Cell(false, neighbors);
+        }
+
+        // public readonly bool TryGetCorner(out GridCorner corner)
+        // {
+        //     switch (Neighbors.Inverse)
+        //     {
+        //         case NeighborSet.NineOClock | NeighborSet.ElevenOClock | NeighborSet.OneOClock:
+        //             corner = GridCorner.ElevenOClock;
+        //             return true;
+        //         case NeighborSet.ElevenOClock | NeighborSet.OneOClock | NeighborSet.ThreeOClock:
+        //             corner = GridCorner.OneOClock;
+        //             return true;
+        //         case NeighborSet.OneOClock | NeighborSet.ThreeOClock | NeighborSet.FiveOClock:
+        //             corner = GridCorner.ThreeOClock;
+        //             return true;
+        //         case NeighborSet.ThreeOClock | NeighborSet.FiveOClock | NeighborSet.SevenOClock:
+        //             corner = GridCorner.FiveOClock;
+        //             return true;
+        //         case NeighborSet.FiveOClock | NeighborSet.SevenOClock | NeighborSet.NineOClock:
+        //             corner = GridCorner.SevenOClock;
+        //             return true;
+        //         case NeighborSet.SevenOClock | NeighborSet.NineOClock | NeighborSet.ElevenOClock:
+        //             corner = GridCorner.NineOClock;
+        //             return true;
+        //         default:
+        //             corner = default;
+        //             return false;
+        //     }
+        // }
+
+        public readonly bool TryGetEdge(out GridEdge edge)
+        {
+            switch (Neighbors.Inverse)
+            {
+                case NeighborSet.ElevenOClock | NeighborSet.OneOClock:
+                    edge = GridEdge.TwelveOClock;
+                    return true;
+                case NeighborSet.OneOClock | NeighborSet.ThreeOClock:
+                    edge = GridEdge.TwoOClock;
+                    return true;
+                case NeighborSet.ThreeOClock | NeighborSet.FiveOClock:
+                    edge = GridEdge.FourOClock;
+                    return true;
+                case NeighborSet.FiveOClock | NeighborSet.SevenOClock:
+                    edge = GridEdge.SixOClock;
+                    return true;
+                case NeighborSet.SevenOClock | NeighborSet.NineOClock:
+                    edge = GridEdge.EightOClock;
+                    return true;
+                case NeighborSet.NineOClock | NeighborSet.ElevenOClock:
+                    edge = GridEdge.TenOClock;
+                    return true;
+
+                default:
+                    edge = default;
+                    return false;
+            }
+        }
+
+        const int CornerBitOffset = 1;
+        const int EdgeBitOffset = 7;
 
         public T Content;
 
-        public NeighborSet Neighbors;
 
         public override readonly string ToString() => $"{{Cell {(IsOccupied ? $"{Content}" : "Empty")}, Neighbors {Neighbors} }}";
     }
@@ -94,38 +135,21 @@ public class HexGrid<T> where T : struct
         {
             var cursor = 0;
             // the second component, r, is the row
-            for (var r = grid.Radius; r >= -grid.Radius; r--)
+            for (var row = grid.Radius; row >= -grid.Radius; row--)
             {
                 // indent for the current row based on its distance from the center
-                for (var i = 0; i < Math.Abs(r); i++)
+                for (var i = 0; i < Math.Abs(row); i++)
                 {
                     span[cursor++] = ' ';
                 }
                 // iterate over the columns in the current row
-                var (pMin, pMax) = HexRowRange(grid.Radius, r);
+                var (pMin, pMax) = HexRowRange(grid.Radius, row);
                 for (var p = pMin; p <= pMax; p++)
                 {
-                    var hex = new Hex(p, -(p + r), r);
+                    var hex = new Hex(p, -(p + row), row);
                     if (grid.Contains(hex))
                     {
-                        span[cursor] = grid.TryGet(hex, out var piece) ? symbol(piece) : '.';
-                        var cellIndex = hex.Index;
-                        if (grid._edgeMask[cellIndex] != 0)
-                        {
-                            span[cursor] = int.TrailingZeroCount(grid._edgeMask[cellIndex]).ToString()[0];
-                            // span[cursor] = '*';
-                        }
-                        if (grid._cornerMask[cellIndex] != 0)
-                        {
-                            span[cursor] = int.TrailingZeroCount(grid._cornerMask[cellIndex]).ToString()[0];
-                            // span[cursor] = '*';
-                        }
-
-                        cursor++;
-                    }
-                    else
-                    {
-                        span[cursor++] = '?';
+                        span[cursor++] = grid.TryGet(hex, out var piece) ? symbol(piece) : '.';
                     }
 
                     span[cursor++] = ' ';
@@ -192,117 +216,48 @@ public class HexGrid<T> where T : struct
         ? hex.Index
         : throw new ArgumentOutOfRangeException(nameof(hex), hex, $"Not within a grid of radius {Radius}.");
 
-    /// <summary>Grid-geometry data for callers composing region/connectivity tracking on top of the grid.</summary>
-    public ReadOnlySpan<short> Neighbors(int index) => _cells[index].Neighbors.AsReadOnlySpan();
-
-    public ushort EdgeMask(int index) => _edgeMask[index];
-
-    public ushort CornerMask(int index) => _cornerMask[index];
-    // public bool TryGetCellContent(int q, int r, int s, [MaybeNullWhen(false)] out T content)
-    // {
-    //     try
-    //     {
-    //         var hex = new Hex(q, r, s);
-    //         return TryGetCellContent(hex, out content);
-    //     }
-    //     catch (ArgumentOutOfRangeException)
-    //     {
-    //         content = default;
-    //         return false;
-    //     }
-    // }
 
     public bool Contains(Hex hex) => HexMath.IsWithin(hex, Radius);
 
-    public bool IsCorner(Hex hex, [MaybeNullWhen(false)] out GridCornerDirection dir)
-    {
-        var ix = hex.Index;
-        dir = default!;
-        return _cornerMask[ix] != 0;
-    }
+    // public bool IsCorner(Hex hex, [MaybeNullWhen(false)] out GridCorner dir)
+    // {
+    //     var ix = hex.Index;
+    //     dir = default!;
+    //     flags = _cells[ix].
+    // }
 
-    public bool IsEdge(Hex hex, [MaybeNullWhen(false)] out GridEdgeDirection dir)
-    {
-        var ix = hex.Index;
-        dir = default!;
-        return _edgeMask[ix] != 0;
-    }
+    // public bool IsEdge(Hex hex, [MaybeNullWhen(false)] out GridEdge dir)
+    // {
+    //     var ix = hex.Index;
+    //     dir = default!;
+    //     return _edgeMask[ix] != 0;
+    // }
 
-    public GridLocationKind GetKind(Hex hex)
-    {
-        var ix = hex.Index;
-        var (c, e) = (_cornerMask[ix], _edgeMask[ix]);
-        var kind = (c, e) switch
-        {
-            (0, 0) => GridLocationKind.Inner,
-            (_, 0) => GridLocationKind.Corner,
-            (0, _) => GridLocationKind.Edge,
-            _ => throw new InvalidOperationException("Unexpected corner/edge mask combination")
-        };
-        return kind;
-    }
+    // public GridLocationKind GetKind(Hex hex)
+    // {
+    //     var ix = hex.Index;
+    //     var (c, e) = (_cornerMask[ix], _edgeMask[ix]);
+    //     var kind = (c, e) switch
+    //     {
+    //         (0, 0) => GridLocationKind.Inner,
+    //         (_, 0) => GridLocationKind.Corner,
+    //         (0, _) => GridLocationKind.Edge,
+    //         _ => throw new InvalidOperationException("Unexpected corner/edge mask combination")
+    //     };
+    //     return kind;
+    // }
 }
-
-
-public enum GridLocationKind
+static class BitHelper
 {
-    Inner,
-    Corner,
-    Edge
-}
-
-
-/// <summary>
-/// Represents a set of neighboring hex cells
-/// as as compact fixed size value type
-/// </summary>
-/// 
-[InlineArray(7)] // 7 * 2 bytes = 112 bits < 128 bits = 16 bytes (UInt128)
-public struct NeighborSet
-{
-    /// <summary>
-    /// The first element of the inline array.
-    /// the first element stores the count of neighbors in the set.
-    /// </summary>
-    private short _element0;
-
-    public ReadOnlySpan<short> AsReadOnlySpan()
+    public static void SetBit(this ref ushort flags, int bitOffset, bool value)
     {
-        return MemoryMarshal.CreateReadOnlySpan(ref this[1], this[0]);
-    }
-
-    public override string ToString() => $"{{{AsReadOnlySpan().JoinToString()}}}";
-
-    internal void Add(short neighbor)
-    {
-        Debug.Assert(this[0] < 7);
-        for (var i = this[0]; i > 0; i--)
+        if (value)
         {
-            if (this[i] == neighbor) { return; }
+            flags |= (ushort)(1 << bitOffset);
         }
-        this[1 + this[0]] = (short)neighbor;
-        this[0] += 1;
-    }
-}
-
-
-static class StringExtensions
-{
-    extension<T>(ReadOnlySpan<T> span)
-    {
-        public string JoinToString(string separator = ",")
+        else
         {
-            var result = new System.Text.StringBuilder();
-            for (var i = 0; i < span.Length; i++)
-            {
-                if (i > 0)
-                {
-                    result.Append(separator);
-                }
-
-                result.Append(span[i]?.ToString());
-            }
-            return result.ToString();
+            flags &= unchecked((ushort)~(1 << bitOffset));
         }
     }
 }
