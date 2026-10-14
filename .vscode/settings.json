@@ -5,7 +5,9 @@
         "Circumradius",
         "Gamewright",
         "Havannah",
-        "RGBD"
+        "Oklab",
+        "RGBD",
+        "spritesheet"
     ],
     "dotnet.defaultSolution": "gamewright.slnx"
 }
