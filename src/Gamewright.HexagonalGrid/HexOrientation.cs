@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Havannah;
+namespace Gamewright.HexagonalGrid;
 
 /// <summary>
 /// How hexagons sit on screen. Pointy-top cells make a board with a flat side up, flat-top cells a board

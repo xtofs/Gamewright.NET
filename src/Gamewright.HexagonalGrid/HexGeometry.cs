@@ -2,9 +2,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Gamewright.Layout;
 
-namespace Havannah;
+namespace Gamewright.HexagonalGrid;
 
 /// <summary>
 /// Provides geometric functions for working with hexagonal grids, such as calculating the positions of hexagon vertices and centers.
@@ -52,16 +51,16 @@ static class HexGeometry
     }
 
     /// <summary>Center of <paramref name="hex"/>, as a displacement from the center of hexagon (0, 0, 0).</summary>
-    internal static Vector2 Center(Hex hex, float hexagonCircumradius, HexOrientation orientation) =>
-        Vector2.Transform(new Vector2(hex.Q, hex.R), orientation.Forward) * hexagonCircumradius;
+    internal static Displacement OffsetFromCenter(Hex hex, float hexagonCircumradius, HexOrientation orientation) =>
+        (Displacement)(Vector2.Transform(new Vector2(hex.Q, hex.R), orientation.Forward) * hexagonCircumradius);
 
     /// <summary>
     /// The hexagon containing <paramref name="offset"/> (a displacement from the center of hexagon (0, 0, 0)).
-    /// Inverse of <see cref="Center"/> followed by <see cref="HexMath.Round"/>; not limited to any board.
+    /// Inverse of <see cref="OffsetFromCenter"/> followed by <see cref="HexMath.Round"/>; not limited to any board.
     /// </summary>
-    internal static Hex FromPoint(Vector2 offset, float hexagonCircumRadius, HexOrientation orientation)
+    internal static Hex FromPoint(Displacement offset, float hexagonCircumRadius, HexOrientation orientation)
     {
-        var axial = Vector2.Transform(offset / hexagonCircumRadius, orientation.Inverse);
+        var axial = Vector2.Transform((Vector2)(offset / hexagonCircumRadius), orientation.Inverse);
         return HexMath.Round(axial.X, axial.Y, -axial.X - axial.Y);
     }
 
@@ -70,7 +69,7 @@ static class HexGeometry
     /// With m = radius − 1 outer rings, the board spans (1.5·m + 1)·size along the axis where cells
     /// have a corner and √3·(m + ½)·size along the axis where they have a flat side.
     /// </summary>
-    internal static float FitCircumRadius(Size available, int radius, HexOrientation orientation)
+    internal static float FitCircumradius(Size available, int radius, HexOrientation orientation)
     {
         var m = radius - 1;
         var cornerAxis = 1.5f * m + 1;           // half extent in units of the circumradius

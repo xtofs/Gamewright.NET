@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Gamewright.Layout;
+namespace Gamewright.Primitives;
 
 
 /// <summary>Four sequential floats (X, Y, W, H), so it can be copied to the command buffer as raw floats.</summary>
@@ -26,9 +26,6 @@ public readonly record struct Rect(float X, float Y, float W, float H)
     public bool Contains(Point p) =>
         Vector2.GreaterThanOrEqualAll((Vector2)p, (Vector2)TopLeft) &&
         Vector2.LessThanAll((Vector2)p, new Vector2(MaxX, MaxY));
-
-    // [Obsolete("Use constructor instead.")]
-    // public static Rect FromPositionAndSize(float x, float y, float width, float height) => new(x, y, width, height);
 
     private bool PrintMembers(System.Text.StringBuilder builder)
     {

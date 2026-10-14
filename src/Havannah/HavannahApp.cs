@@ -10,7 +10,7 @@ public sealed class HavannahApp : IImmediateApp
 {
     private readonly HavannahGame _game;
 
-    private readonly HexBoard _board;
+    private readonly HexBoardNode _board;
 
 
     private static readonly Color BoardBackground = new(0x20, 0x20, 0x20);
@@ -26,8 +26,8 @@ public sealed class HavannahApp : IImmediateApp
 
     public HavannahApp()
     {
-        _game = new HavannahGame(radius: 3);
-        _board = new HexBoard { Radius = _game.Radius, Margin = 15 };
+        _game = new HavannahGame(radius: 8);
+        _board = new HexBoardNode { Radius = _game.Radius, Margin = 15 };
     }
 
 

@@ -10,12 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Gamewright.Primitives" />
+    <Using Include="Gamewright.HexagonalGrid" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Gamewright/Gamewright.csproj" />
+    <ProjectReference Include="..\Gamewright.HexagonalGrid\Gamewright.HexagonalGrid.csproj" />
   </ItemGroup>
 
 </Project>

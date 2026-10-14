@@ -6,9 +6,9 @@ namespace Havannah;
 /// Layout leaf for a Havannah board. It takes part in layout as a single rectangle;
 /// everything inside it is plain arithmetic in <see cref="Geometry"/>.
 /// </summary>
-sealed record class HexBoard : Node
+sealed record class HexBoardNode : Node
 {
-    /// <summary>Cells along each edge of the board (see <see cref="HexMath.CountHexagons"/>).</summary>
+    /// <summary>Cells along each edge of the board (see <see cref="HexMath.HexagonCount"/>).</summary>
     public int Radius { get; init; } = 8;
 
     /// <summary>True: the board has a flat side up (pointy-top cells). False: a corner up (flat-top cells).</summary>

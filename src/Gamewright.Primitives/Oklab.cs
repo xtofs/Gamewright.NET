@@ -1,4 +1,4 @@
-namespace Gamewright;
+namespace Gamewright.Primitives;
 
 // using System;
 

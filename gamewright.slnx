@@ -1,5 +1,13 @@
 <Solution>
   <Project Path="src/Gamewright/Gamewright.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/Gamewright.HexagonalGrid/Gamewright.HexagonalGrid.csproj" />
+    <Project Path="src/Gamewright.Primitives/Gamewright.Primitives.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Gamewright.Primitives.Tests/Gamewright.Primitives.Tests.csproj" />
+    <Project Path="tests/Gamewright.HexagonalGrid.Tests/Gamewright.HexagonalGrid.Tests.csproj" />
+  </Folder>
   <Project Path="src/Chess/Chess.csproj" />
   <Project Path="src/Havannah/Havannah.csproj" />
 </Solution>

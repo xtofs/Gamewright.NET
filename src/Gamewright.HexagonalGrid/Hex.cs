@@ -1,4 +1,4 @@
-namespace Havannah;
+namespace Gamewright.HexagonalGrid;
 
 public readonly record struct Hex
 {
@@ -13,7 +13,14 @@ public readonly record struct Hex
     /// </summary>
     public int Index { get; }
 
+    /// <summary>
+    /// One of the three color classes (0,1,2) of the hexagon based on its cube coordinates.
+    /// The color class is so that no two adjacent hexagons share the same color class.
+    /// The center hexagon has a color class of 0.
+    /// </summary>
     public int ColorClass => Math.Abs(this.Q % 2) + 2 * Math.Abs(this.R % 2);
+
+    public int Ring => Math.Max(Math.Abs(Q), Math.Max(Math.Abs(R), Math.Abs(S)));
 
     public Hex(int q, int r, int s)
     {

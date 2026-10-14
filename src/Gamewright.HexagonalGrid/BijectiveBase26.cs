@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Havannah;
+namespace Gamewright.HexagonalGrid;
 
 public static class BijectiveBase26
 {

@@ -120,7 +120,11 @@ function resize() {
 
 // Colors are packed 0xRRGGBBAA and travel as raw uint32 bits (read via the Uint32Array view).
 function cssColor(v) {
-  return `rgba(${(v >>> 24) & 255},${(v >>> 16) & 255},${(v >>> 8) & 255},${(v & 255) / 255})`;
+  const r = (v >>> 24) & 255;
+  const g = (v >>> 16) & 255;
+  const b = (v >>> 8) & 255;
+  const a = (v & 255) / 255;
+  return `rgba(${r} ${g} ${b} / ${a})`;
 }
 
 // Reads "n x0 y0 … x(n-1) y(n-1)" starting at f[i] and builds a closed path from it.
