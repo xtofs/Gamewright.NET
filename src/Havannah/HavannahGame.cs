@@ -217,4 +217,3 @@ public static class HavannaStructures
     //         return $"Region {index}: edges=0x{region.Edges:X2}, corners=0x{region.Corners:X2}, bridge={BitOperations.PopCount(region.Corners) >= 2}, fork={BitOperations.PopCount(region.Edges) >= 3}\n{string.Join("\n", members)}";
     //     }
 }
-

@@ -18,6 +18,7 @@ public sealed class HavannahApp : IImmediateApp
     private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.59987f, s: 0.013f);
 
     private SpriteAtlas<HavannahPiece> _pieces = default!; // Sprite atlas for game pieces loaded in LoadResources
+    private Region<HavannahPiece>? _highlightedRegion;
 
     public HavannahApp()
     {
@@ -43,8 +44,6 @@ public sealed class HavannahApp : IImmediateApp
         }
     }
 
-    // enum GamePiece { Red, Green, Blue, White, Black, RedMatt, GreenMatt, BlueMatt, WhiteMatt, BlackMatt }
-
 
     public void RenderFrame(float timeMs, in Input io, Canvas canvas)
     {
@@ -58,6 +57,23 @@ public sealed class HavannahApp : IImmediateApp
             if (geo.TryGetHex(pointer, out var clicked) && _game[clicked] == null)
             {
                 _game.Play(clicked);
+                var found = HavannahStructures.FindRegion(_game.Grid, clicked);
+                // three connected edges indicate a winning region
+                if (found.Edges.Count >= 3)
+                {
+                    _highlightedRegion = found;
+                }
+                // two connected corners indicate a winning region
+                if (found.Corners.Count >= 2)
+                {
+                    _highlightedRegion = found;
+                }
+                // a connected region of same‑colored hexagons whose adjacency graph contains a loop 
+                // that encloses at least one cell not of that color.
+                // if (found.IsRing)
+                // {
+                //     _highlightedRegion = found;
+                // }
             }
         }
 
@@ -66,48 +82,62 @@ public sealed class HavannahApp : IImmediateApp
 
         foreach (var hex in geo.GridHexes)
         {
-            var center = geo.HexCenter(hex);
             var corners = geo.HexCorners(hex);
             canvas.FillPolygon(corners, CellColors[hex.ColorClass]);
             canvas.StrokePolygon(corners, 1.5f, CellOutline);
 
+#if SHOW_INDICATORS
             if (_game.Grid.TryGetCorner(hex, out var corner))
             {
                 canvas.Circle(center, 20, Colors.IndianRed);
-                var angle = corner.Bearing();
-                // var label = edge.ToString().StripSuffix("OClock") ;
-                var label = $"{float.RadiansToDegrees(angle):F0}°";
-                canvas.Text(label, center, 12, Colors.Black);
-                var e = center + 20 * Compass(angle);
-                canvas.Line(center, e, 3, Colors.Black);
+                BearingIndicator(canvas, center, corner.Bearing());
             }
             if (_game.Grid.TryGetEdge(hex, out var edge))
             {
                 canvas.Circle(center, 20, Colors.OrangeRed);
 
-                var angle = edge.Bearing();
-                // var label = edge.ToString().StripSuffix("OClock") ;
-                var label = $"{float.RadiansToDegrees(angle):F0}°";
-                canvas.Text(label, center, 12, Colors.Black);
-                var e = center + 20 * Compass(angle);
-                canvas.Line(center, e, 3, Colors.Black);
+                BearingIndicator(canvas, center, edge.Bearing());
             }
+#endif
 
+        }
 
+        // draw the highlighted region
+        if (_highlightedRegion is { } region && region.Members.Count > 0)
+        {
+            foreach (var hex in region.Members)
+            {
+                var center = geo.HexCenter(hex);
+                var corners = geo.HexCorners(hex);
+                canvas.FillPolygon(corners, Colors.Yellow.WithAlpha(0.3f));
+            }
+        }
+
+        // draw the piece 
+        foreach (var hex in geo.GridHexes)
+        {
             if (_game[hex] is { } piece)
             {
+                var center = geo.HexCenter(hex);
                 var rect = Rect.FromCenter(center, Size.Square(geo.HexagonCircumRadius * 1.6f));
 
                 var sprite = _pieces[piece];
                 canvas.DrawSprite(sprite, rect);
             }
-
         }
+    }
+
+    private static void BearingIndicator(Canvas canvas, Point center, float angle)
+    {
+        var label = $"{float.RadiansToDegrees(angle):F0}°";
+        canvas.Text(label, center, 12, Colors.Black);
+        var e = center + 20 * Compass(angle);
+        canvas.Line(center, e, 3, Colors.Black);
     }
 
     /// <summary>Unit vector for a compass bearing (radians clockwise from up; screen y points down).</summary>
     private static Displacement Compass(float bearing) =>
-        new(MathF.Sin(bearing), -MathF.Cos(bearing));
+        new Displacement(MathF.Sin(bearing), -MathF.Cos(bearing));
 
     private static Color PieceColor(HavannahPiece piece) => piece switch
     {
@@ -115,19 +145,4 @@ public sealed class HavannahApp : IImmediateApp
         HavannahPiece.Blue => Colors.RoyalBlue,
         _ => throw new ArgumentOutOfRangeException(nameof(piece), piece, null),
     };
-}
-
-static class StringExtensions
-{
-    extension(string str)
-    {
-        public string StripSuffix(string suffix)
-        {
-            if (str.EndsWith(suffix, StringComparison.Ordinal))
-            {
-                return str.Substring(0, str.Length - suffix.Length);
-            }
-            return str;
-        }
-    }
 }

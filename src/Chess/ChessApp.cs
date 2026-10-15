@@ -55,7 +55,7 @@ public sealed class ChessApp : IImmediateApp
 
         if (_selectedSquare is { } ssq)
         {
-            var color = Colors.HotPink.Transparent(.5f);
+            var color = Colors.HotPink.WithAlpha(.5f);
             var rect = geo.SquareRect(ssq).Deflate(geo.SquareSize * .09f); // 10% smaller than the square
             canvas.StrokeRect(rect, io.Size.W / 100f, color);
         }

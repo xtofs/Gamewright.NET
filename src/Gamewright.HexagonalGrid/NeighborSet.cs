@@ -42,7 +42,7 @@ public static class NeighborSetExtensions
 
     extension(HexNeighbor neighbor)
     {
-        public NeighborSet ToSet() => (NeighborSet)(1 << (int)neighbor);
+        public NeighborSet ToSingletonSet() => (NeighborSet)(1 << (int)neighbor);
 
         public HexOffset Direction => neighbor switch
         {
@@ -58,7 +58,7 @@ public static class NeighborSetExtensions
 
     extension(NeighborSet set)
     {
-        public bool Has(HexNeighbor neighbor) => (set & neighbor.ToSet()) == neighbor.ToSet();
+        public bool Has(HexNeighbor neighbor) => (set & neighbor.ToSingletonSet()) == neighbor.ToSingletonSet();
 
         public NeighborSet Inverse => ~set & (NeighborSet.OneOClock | NeighborSet.ThreeOClock | NeighborSet.FiveOClock | NeighborSet.SevenOClock | NeighborSet.NineOClock | NeighborSet.ElevenOClock);
 
@@ -91,9 +91,9 @@ public static class NeighborSetExtensions
             }
         }
 
-        public NeighborSet Add(HexNeighbor neighbor) => set | neighbor.ToSet();
+        public NeighborSet Add(HexNeighbor neighbor) => set | neighbor.ToSingletonSet();
 
-        public NeighborSet Remove(HexNeighbor neighbor) => set & ~neighbor.ToSet();
+        public NeighborSet Remove(HexNeighbor neighbor) => set & ~neighbor.ToSingletonSet();
 
 
     }

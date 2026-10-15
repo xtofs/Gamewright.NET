@@ -41,5 +41,6 @@ public readonly record struct Color(byte R, byte G, byte B, byte A = 0xFF)
 
     private Color Scale(float factor) => FromVector4(ToVector4() * new Vector4(factor, factor, factor, 1f));
 
-    public Color Transparent(float v) => FromVector4(ToVector4() * new Vector4(1f, 1f, 1f, v));
+    public Color WithAlpha(float v)
+        => FromVector4(ToVector4() * new Vector4(1f, 1f, 1f, v));
 }

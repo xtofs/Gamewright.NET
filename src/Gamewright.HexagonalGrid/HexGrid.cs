@@ -61,7 +61,6 @@ public class HexGrid<T> where T : struct
         internal static Cell Create(Hex hex, int radius)
         {
             NeighborSet neighbors = HexMath.CreateNeighborSet(hex, radius);
-            Console.WriteLine($"creating neighbors for hex {hex.Index}: {neighbors:X}");
             return new Cell(false, neighbors);
         }
 
@@ -130,6 +129,8 @@ public class HexGrid<T> where T : struct
 
 
         public override readonly string ToString() => $"{{Cell {(IsOccupied ? $"{Content}" : "Empty")}, Neighbors {Neighbors} }}";
+
+
     }
 
     public string Format(Func<T, char> symbol)
@@ -193,7 +194,7 @@ public class HexGrid<T> where T : struct
     /// <summary>Empties the cell at <paramref name="hex"/>. Returns false if it was already empty.</summary>
     public bool Remove(Hex hex)
     {
-        ref var cell = ref _cells[IndexOf(hex)];
+        ref var cell = ref _cells[hex.Index];
         var wasOccupied = cell.IsOccupied;
         cell.IsOccupied = false;
         cell.Content = default;
@@ -223,10 +224,24 @@ public class HexGrid<T> where T : struct
         return false;
     }
 
+    [Obsolete("Use hex.Index directly instead.")]
     private int IndexOf(Hex hex) => Contains(hex)
-        ? hex.Index
-        : throw new ArgumentOutOfRangeException(nameof(hex), hex, $"Not within a grid of radius {Radius}.");
+            ? hex.Index
+            : throw new ArgumentOutOfRangeException(nameof(hex), hex, $"Not within a grid of radius {Radius}.");
 
 
     public bool Contains(Hex hex) => HexMath.IsOnBoard(hex, Radius);
+
+    internal IEnumerable<Hex> Neighbors(Hex hex)
+    {
+        foreach (var n in HexNeighbor.All)
+        {
+            var dir = n.Direction;
+            var neighbor = hex + dir;
+            if (Contains(neighbor))
+            {
+                yield return neighbor;
+            }
+        }
+    }
 }
