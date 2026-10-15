@@ -33,7 +33,7 @@ public sealed class Renderer
             _resourcesLoaded = true;
         }
 
-        CanvasInterop.Init(canvasId, _frame, _imageLoaded);   // starts the frame loop; its first frame runs later
+        CanvasInterop.Init(canvasId, _frame, _imageLoaded, CommandBuffer.OpCodeTable);   // starts the frame loop; its first frame runs later
         FlushImages();   // hand the requested loads to JS now (they need Init's callback), before the first frame
         _started = true;
     }

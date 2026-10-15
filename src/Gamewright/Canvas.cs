@@ -1,104 +1,52 @@
 namespace Gamewright;
 
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
 using Gamewright.Layout;
 
 /// <summary>
-/// Per-frame command buffer of 32-bit slots. Numbers are stored as float; colors (0xRRGGBBAA)
-/// are stored as raw uint bits and never pass through a float. JSImport MemoryView only
-/// supports Span&lt;byte|int|double&gt;, so the buffer crosses the boundary as bytes (see Renderer).
-/// Opcodes must match the switch in canvas.js.
+/// Immediate-mode drawing surface: each call appends a command to the frame's <see cref="CommandBuffer"/>,
+/// which the Renderer submits to canvas.js once per frame.
 /// </summary>
 public sealed class Canvas
 {
-    // Opcodes must match the switch in canvas.js.
-    const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4, OpLine = 5, OpImage = 6,
-              OpFillPolygon = 7, OpStrokePolygon = 8, OpStrokeSegments = 9;
+    readonly CommandBuffer _cmd = new();
 
-    static Canvas()
-    {
-        // Rects and points are copied into the float buffer as raw memory.
-        System.Diagnostics.Debug.Assert(Unsafe.SizeOf<Rect>() == 4 * sizeof(float));
-        System.Diagnostics.Debug.Assert(Unsafe.SizeOf<Point>() == 2 * sizeof(float));
-    }
+    internal Span<float> Commands => _cmd.Span;
 
-    float[] _buf = new float[4096];
-    int _n;
+    internal List<(int Id, string Value)> NewStrings => _cmd.NewStrings;
 
-    readonly Dictionary<string, int> _stringIds = new(StringComparer.Ordinal);
-    internal readonly List<(int Id, string Value)> NewStrings = new();
-
-    internal Span<float> Commands => _buf.AsSpan(0, _n);
-
-    internal void Reset() => _n = 0;
+    internal void Reset() => _cmd.Reset();
 
     public void Clear(Color color)
     {
-        Ensure(2);
-        _buf[_n++] = OpClear;
-        _buf[_n++] = ColorAsFloat(color);
+        _cmd.AddOpCode(Op.Clear).AddColor(color);
     }
-
-    private static float ColorAsFloat(Color color) => BitConverter.UInt32BitsToSingle(color.Packed);
 
     public void FillRect(Rect rect, Color color)
     {
-        Ensure(6);
-        _buf[_n++] = OpRect;
-        Write(rect);
-        _buf[_n++] = ColorAsFloat(color);
+        _cmd.AddOpCode(Op.Rect).AddRect(rect).AddColor(color);
     }
 
     public void StrokeRect(Rect rect, float lineWidth, Color color)
     {
-        Ensure(7);
-        _buf[_n++] = OpStrokeRect;
-        Write(rect);
-        _buf[_n++] = lineWidth;
-        _buf[_n++] = ColorAsFloat(color);
+        _cmd.AddOpCode(Op.StrokeRect).AddRect(rect).AddFloat(lineWidth).AddColor(color);
     }
 
     public void Line(Point p1, Point p2, float lineWidth, Color color) =>
-        Line(p1.X, p1.Y, p2.X, p2.Y, lineWidth, color);
+        _cmd.AddOpCode(Op.Line).AddPoint(p1).AddPoint(p2).AddFloat(lineWidth).AddColor(color);
 
-
-    public void Line(float x1, float y1, float x2, float y2, float lineWidth, Color color)
-    {
-        Ensure(7);
-        _buf[_n++] = OpLine;
-        _buf[_n++] = x1; _buf[_n++] = y1; _buf[_n++] = x2; _buf[_n++] = y2;
-        _buf[_n++] = lineWidth;
-        _buf[_n++] = ColorAsFloat(color);
-    }
+    public void Line(float x1, float y1, float x2, float y2, float lineWidth, Color color) =>
+        Line(new Point(x1, y1), new Point(x2, y2), lineWidth, color);
 
     public void Circle(Point center, float r, Color color)
         => Circle(center.X, center.Y, r, color);
 
-    public void Circle(float x, float y, float r, Color color)
-    {
-        Ensure(5);
-        _buf[_n++] = OpCircle;
-        _buf[_n++] = x;
-        _buf[_n++] = y;
-        _buf[_n++] = r;
-        _buf[_n++] = ColorAsFloat(color);
-    }
+    public void Circle(float x, float y, float r, Color color) =>
+        _cmd.AddOpCode(Op.Circle).AddPoint(new Point(x, y)).AddFloat(r).AddColor(color);
 
     /// <summary>Centered text. Strings are interned: each distinct string crosses to JS once.
     /// Avoid building a new string every frame (e.g. $"t={time}"), or the table grows unbounded.</summary>
-    public void Text(string s, Point point, float fontSize, Color color)
-    {
-        Ensure(6);
-
-        _buf[_n++] = OpText;
-        _buf[_n++] = Intern(s);
-        _buf[_n++] = point.X;
-        _buf[_n++] = point.Y;
-        _buf[_n++] = fontSize;
-        _buf[_n++] = ColorAsFloat(color);
-    }
+    public void Text(string s, Point point, float fontSize, Color color) =>
+        _cmd.AddOpCode(Op.Text).AddString(s).AddPoint(point).AddFloat(fontSize).AddColor(color);
 
     // ---- Images -----------------------------------------------------------------------------
     // Loading is asynchronous and happens outside the command stream: LoadImage queues a request that
@@ -158,13 +106,9 @@ public sealed class Canvas
             return;     // still loading (or failed): draw nothing
         }
 
-        Ensure(12);
-        _buf[_n++] = OpImage;
-        _buf[_n++] = image.Id;
-        Write(source);
-        Write(dest);
-        _buf[_n++] = Math.Clamp(alpha, 0f, 1f);
-        _buf[_n++] = pixelated ? 1f : 0f;   // flags: bit 0 = pixelated
+        _cmd.AddOpCode(Op.Image).AddInt(image.Id).AddRect(source).AddRect(dest)
+            .AddFloat(Math.Clamp(alpha, 0f, 1f))
+            .AddFloat(pixelated ? 1f : 0f);   // flags: bit 0 = pixelated
     }
 
     /// <summary>Draws a sprite (a region of an image) into <paramref name="dest"/>.</summary>
@@ -188,38 +132,12 @@ public sealed class Canvas
         }
     }
 
-    private int Intern(string s)
-    {
-        if (!_stringIds.TryGetValue(s, out var id))
-        {
-            id = _stringIds.Count;
-            _stringIds.Add(s, id);
-            NewStrings.Add((id, s));
-        }
-        return id;
-    }
-
-    /// <summary>Appends the four floats X, Y, W, H. The caller has already called <see cref="Ensure"/>.</summary>
-    private void Write(Rect rect)
-    {
-        MemoryMarshal.Cast<float, Rect>(_buf.AsSpan(_n, 4))[0] = rect;
-        _n += 4;
-    }
-
-    private void Ensure(int count)
-    {
-        if (_n + count > _buf.Length)
-        {
-            Array.Resize(ref _buf, Math.Max(_buf.Length * 2, _n + count));
-        }
-    }
-
     // ---- Polygons ---------------------------------------------------------------------------
     // Variable-length commands: the point count comes right after the opcode, so the JS side knows
     // how many operands to consume before it reaches the fixed tail (line width, color).
-    //   FillPolygon   n x0 y0 … x(n-1) y(n-1) rgba
-    //   StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
-    // The count travels as a float, which is exact for integers below 2^24.
+    //   FillPolygon    n x0 y0 … x(n-1) y(n-1) rgba
+    //   StrokePolygon  n x0 y0 … x(n-1) y(n-1) lineWidth rgba
+    //   StrokeSegments n x0 y0 … x(n-1) y(n-1) lineWidth rgba   (n points = n / 2 separate segments)
 
     /// <summary>Fills the closed polygon through <paramref name="points"/>. Fewer than 3 points draw nothing.</summary>
     public void FillPolygon(ReadOnlySpan<Point> points, Color color)
@@ -229,8 +147,7 @@ public sealed class Canvas
             return;
         }
 
-        WritePolygon(OpFillPolygon, points, tail: 1);
-        _buf[_n++] = ColorAsFloat(color);
+        _cmd.AddOpCode(Op.FillPolygon).AddPoints(points).AddColor(color);
     }
 
     /// <summary>Strokes the outline of the closed polygon through <paramref name="points"/>. Fewer than 2 points draw nothing.</summary>
@@ -241,9 +158,7 @@ public sealed class Canvas
             return;
         }
 
-        WritePolygon(OpStrokePolygon, points, tail: 2);
-        _buf[_n++] = lineWidth;
-        _buf[_n++] = ColorAsFloat(color);
+        _cmd.AddOpCode(Op.StrokePolygon).AddPoints(points).AddFloat(lineWidth).AddColor(color);
     }
 
     /// <summary>
@@ -258,19 +173,6 @@ public sealed class Canvas
             return;
         }
 
-        WritePolygon(OpStrokeSegments, endpoints, tail: 2);
-        _buf[_n++] = lineWidth;
-        _buf[_n++] = ColorAsFloat(color);
-    }
-
-    /// <summary>Writes opcode, count and coordinates, reserving room for <paramref name="tail"/> more slots.</summary>
-    private void WritePolygon(int opcode, ReadOnlySpan<Point> points, int tail)
-    {
-        Ensure(2 + 2 * points.Length + tail);
-        _buf[_n++] = opcode;
-        _buf[_n++] = points.Length;
-        var floats = MemoryMarshal.Cast<Point, float>(points);
-        floats.CopyTo(_buf.AsSpan(_n));
-        _n += floats.Length;
+        _cmd.AddOpCode(Op.StrokeSegments).AddPoints(endpoints).AddFloat(lineWidth).AddColor(color);
     }
 }

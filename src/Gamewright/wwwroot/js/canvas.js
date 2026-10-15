@@ -20,7 +20,8 @@ const images = []; // id -> ImageBitmap, filled by loadImage
 const loading = new Set(); // ids whose load is still in flight
 let imageLoadedCb; // .NET callback (id, width, height); width 0 means the load failed
 
-export function init(canvasId, frame, imageLoaded) {
+export function init(canvasId, frame, imageLoaded, opCodes) {
+  defineOpCodes(opCodes);
   canvas = document.getElementById(canvasId);
   ctx = canvas.getContext("2d");
   frameCb = frame;
@@ -140,20 +141,40 @@ function polygonPath(f, i) {
   return i + 2 * n;
 }
 
-export const OpCode = Object.freeze({
-  OpClear: 0,
-  OpRect: 1,
-  OpCircle: 2,
-  OpText: 3,
-  OpStrokeRect: 4,
-  OpLine: 5,
-  OpImage: 6,
-  OpFillPolygon: 7,
-  OpStrokePolygon: 8,
-  OpStrokeSegments: 9,
-});
+// Opcode numbers belong to the Op enum in CommandBuffer.cs. .NET hands them over in init, and init checks that
+// this file and .NET agree on the set of ops, so a mismatch fails at startup instead of mid-frame.
+const OpCode = {};
+const HANDLED = [
+  "Clear",
+  "Rect",
+  "Circle",
+  "Text",
+  "StrokeRect",
+  "Line",
+  "Image",
+  "FillPolygon",
+  "StrokePolygon",
+  "StrokeSegments",
+];
 
-// Opcodes must match Canvas.cs.
+// "Clear=0,Rect=1,…" -> OpCode, verified against HANDLED in both directions.
+function defineOpCodes(table) {
+  const known = {};
+  for (const pair of table.split(",")) {
+    const [name, value] = pair.split("=");
+    known[name] = Number(value);
+  }
+  const unhandled = Object.keys(known).filter((n) => !HANDLED.includes(n));
+  const missing = HANDLED.filter((n) => !(n in known));
+  if (unhandled.length || missing.length) {
+    throw new Error(
+      `Gamewright: canvas.js and .NET disagree on opcodes. ` +
+        `Not handled by canvas.js: [${unhandled}]. Not defined by .NET: [${missing}].`,
+    );
+  }
+  Object.assign(OpCode, known);
+}
+
 export function submit(view) {
   const bytes = view.slice(); // copy out of WASM memory (view dies after this call)
   const f = new Float32Array(
@@ -169,13 +190,13 @@ export function submit(view) {
   let i = 0;
   while (i < f.length) {
     switch (f[i++]) {
-      case OpCode.OpClear: {
+      case OpCode.Clear: {
         // Clear rgba
         ctx.fillStyle = cssColor(u[i++]);
         ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         break;
       }
-      case OpCode.OpRect: {
+      case OpCode.Rect: {
         // Rect x y w h rgba
         const x = f[i++];
         const y = f[i++];
@@ -186,7 +207,7 @@ export function submit(view) {
         ctx.fillRect(x, y, w, h);
         break;
       }
-      case OpCode.OpCircle: {
+      case OpCode.Circle: {
         // Circle x y r rgba
         const x = f[i++],
           y = f[i++],
@@ -197,7 +218,7 @@ export function submit(view) {
         ctx.fill();
         break;
       }
-      case OpCode.OpText: {
+      case OpCode.Text: {
         // Text strId x y size rgba (centered)
         const s = strings[f[i++]],
           x = f[i++],
@@ -211,7 +232,7 @@ export function submit(view) {
         ctx.fillText(s, x, y);
         break;
       }
-      case OpCode.OpStrokeRect: {
+      case OpCode.StrokeRect: {
         // StrokeRect x y w h lineWidth rgba
         const x = f[i++],
           y = f[i++],
@@ -222,7 +243,7 @@ export function submit(view) {
         ctx.strokeRect(x, y, w, h);
         break;
       }
-      case OpCode.OpLine: {
+      case OpCode.Line: {
         // Line x1, y1, x2, y2 lineWidth rgba
         const x1 = f[i++],
           y1 = f[i++],
@@ -237,7 +258,7 @@ export function submit(view) {
         ctx.stroke();
         break;
       }
-      case OpCode.OpImage: {
+      case OpCode.Image: {
         // Image id sx sy sw sh dx dy dw dh alpha flags (flags bit 0 = pixelated)
         const bitmap = images[f[i++]],
           sx = f[i++],
@@ -260,14 +281,14 @@ export function submit(view) {
         }
         break;
       }
-      case OpCode.OpFillPolygon: {
+      case OpCode.FillPolygon: {
         // FillPolygon n x0 y0 … x(n-1) y(n-1) rgba
         i = polygonPath(f, i);
         ctx.fillStyle = cssColor(u[i++]);
         ctx.fill();
         break;
       }
-      case OpCode.OpStrokePolygon: {
+      case OpCode.StrokePolygon: {
         // StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
         i = polygonPath(f, i);
         ctx.lineWidth = f[i++];
@@ -275,7 +296,7 @@ export function submit(view) {
         ctx.stroke();
         break;
       }
-      case OpCode.OpStrokeSegments: {
+      case OpCode.StrokeSegments: {
         // StrokeSegments n x0 y0 … x(n-1) y(n-1) lineWidth rgba, with n points forming n / 2 separate segments
         const n = f[i++];
         ctx.beginPath();
