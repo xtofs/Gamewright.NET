@@ -40,21 +40,7 @@ Link the code involved so an item can be picked up cold.
   Check that it is used only to let tests see internals, and not to get around visibility between library
   projects (currently e.g. `Gamewright.HexagonalGrid` → `Havannah`, for `HexGrid.Neighbors`).
 
-## Docs
-
-- [ ] **Bring the root [README](README.md) up to date.**
-  - Paths: `src/Gamewright/Gfx/` (and `Gfx/CanvasInterop.cs`, `Gfx/Canvas.cs`) no longer exist, the files are
-    directly in `src/Gamewright/`. `src/Chess/HelloApp.cs` is now `ChessApp.cs`, and the sample is a chess
-    board, not "a checkers board and a pointer follower".
-  - Missing from the project table: `src/Havannah`, `Gamewright.HexagonalGrid`, `Gamewright.SquareGrid`,
-    `Gamewright.Primitives` and `tests/`.
-  - The per-frame flow shows `app.Frame(input, draw)`; the interface method is
-    `RenderFrame(timeMs, in Input, Canvas)`. `Init` now also takes the opcode table.
-  - "Adding a primitive requires a new opcode in `Canvas.cs`" now means an `Op` member, a `Canvas` method, the
-    name in `HANDLED` and a `case` in canvas.js.
-  - "Opcode 6" for images: opcode numbers now come from the `Op` enum, they are not fixed.
-  - "The command buffer is `float[]`" should point at `CommandBuffer`.
-
 ## Done
 
-(nothing yet)
+- [x] **Bring the root [README](README.md) up to date.** Paths, project table, per-frame flow, how to add a
+  primitive and the command buffer note now match the code.

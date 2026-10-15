@@ -7,17 +7,20 @@ owns all application state and emits a command buffer every frame.
 ## Run
 
 ```sh
-dotnet run --project src/Chess/Chess.csproj
+dotnet run --project src/Chess/Chess.csproj      # a chess board
+dotnet run --project src/Havannah/Havannah.csproj  # the Havannah board game
+dotnet test gamewright.slnx                      # all test projects
 ```
 
-Open the URL it prints. The sample draws a checkers board and a pointer follower.
+Open the URL it prints. (`.claude/launch.json` has ready-made configurations for both apps on fixed ports.)
 
 ## Startup flow
 
 ```plain
 Renderer.StartAsync (once)
   ├─ app.LoadResources(loader)    runs before the frame loop; image loads are only queued here
-  ├─ Init(canvasId, ...)          .NET → JS   starts the rAF loop (its first frame runs later)
+  ├─ Init(canvasId, ..., opCodes) .NET → JS   starts the rAF loop (its first frame runs later); opCodes is the
+  │                                           Op enum as "Name=Number" pairs, which canvas.js checks at startup
   └─ LoadImage(id, url)           .NET → JS   hands the queued loads to JS, before the first frame
 ```
 
@@ -27,7 +30,7 @@ Renderer.StartAsync (once)
 rAF tick (JS)
   └─ frame(t)                    JS → .NET   [JSImport'd Action<float>]
        ├─ ReadInput(Span<byte>)   .NET → JS   copy 8-slot float32 input block
-       ├─ app.Frame(input, draw)              pure C#, no interop
+       ├─ app.RenderFrame(timeMs, input, canvas)   pure C#, no interop: appends commands to the CommandBuffer
        ├─ DefineString(id, s)     .NET → JS   only for strings never seen before
        ├─ LoadImage(id, url)      .NET → JS   only when an image is created (FreeImage: disposed)
        └─ Submit(Span<byte>)      .NET → JS   one call, JS replays onto 2D context
@@ -37,18 +40,26 @@ rAF tick (JS)
 
 | Path | Role |
 | --- | --- |
-| `src/Gamewright/` | Reusable graphics and browser-rendering Razor Class Library |
-| `src/Gamewright/Gfx/` | `Renderer`, `Canvas`, `Input`, `IImmediateApp`, `Image`/`Sprite`/`SpriteSheet`, geometry, and color types |
-| `src/Gamewright/Gfx/CanvasInterop.cs` | `[JSImport]` bindings using generated marshalling, not `IJSRuntime` |
+| `src/Gamewright/` | The reusable library (a Razor Class Library): rendering, input, resources and layout |
+| `src/Gamewright/Renderer.cs` | Owns the frame callback: input in, commands out, image loads forwarded to JS |
+| `src/Gamewright/Canvas.cs` | The drawing API apps call: `Fill*`, `Stroke*` and `Draw*` methods, each appending to the command buffer |
+| `src/Gamewright/CommandBuffer.cs` | The per-frame slot buffer, string interning, and the `Op` enum (the single definition of the opcodes) |
+| `src/Gamewright/CanvasInterop.cs` | `[JSImport]` bindings using generated marshalling, not `IJSRuntime` |
+| `src/Gamewright/IImmediateApp.cs`, `Input.cs` | What an app implements (`LoadResources`, `RenderFrame`) and what it receives each frame |
+| `src/Gamewright/Resources/` | `ResourceLoader`, `Image`, `Sprite`, `SpriteSheet`, `SpriteAtlas` |
+| `src/Gamewright/Layout/` | Measure/arrange layout tree (`Node`, `Grid`, `StackPanel`, `SquareBoardNode`, …); nodes carry no rendering |
+| `src/Gamewright/SquareBoardCanvasExtensions.cs` | Drawing helpers for square boards (coordinate labels) |
 | `src/Gamewright/wwwroot/js/canvas.js` | rAF loop, input capture, DPR-aware resize, and command replay |
-| `src/Chess/` | Blazor WebAssembly host application and sample |
-| `src/Chess/HelloApp.cs` | Sample app: state plus `Frame()` |
-| `src/Chess/Pages/Home.razor` | Renders the canvas and starts/stops the renderer |
+| `src/Gamewright.Primitives/` | Dependency-free value types: `Point`, `Displacement`, `Size`, `Rect`, `Color`, `Oklab` (see its README) |
+| `src/Gamewright.SquareGrid/` | `Square` coordinates and `SquareBoardGeometry` |
+| `src/Gamewright.HexagonalGrid/` | Hex cube coordinates, `HexGrid<T>`, neighbor sets, grid edges and corners, and `BoardGeometry` for pointy-top and flat-top boards |
+| `src/Chess/` | Blazor WebAssembly host and sample: `ChessApp` (rendering and input), `ChessGame`, `ChessPiece` |
+| `src/Havannah/` | Blazor WebAssembly host and game: `HavannahApp`, `HavannahGame`, and the win detection in `HavannahStructures` (`FindRegion`, `FindWins` for bridge, fork and ring) |
+| `tests/` | One xUnit project per library (`Gamewright.Tests`, `.Primitives.Tests`, `.SquareGrid.Tests`, `.HexagonalGrid.Tests`) and `Havannah.Tests` |
 
-The application references the library using a project reference. The library's
-JavaScript is delivered as a static web asset at
-`_content/Gamewright/js/canvas.js`; the renderer imports this module
-when `StartAsync` runs.
+Each host's `Pages/Home.razor` renders a `<canvas>` once and starts or stops the `Renderer`. The applications
+reference the library through project references. The library's JavaScript is delivered as a static web asset at
+`_content/Gamewright/js/canvas.js`; the renderer imports this module when `StartAsync` runs.
 
 ## The command-buffer mechanism: pros and cons
 
@@ -103,7 +114,7 @@ or serializing commands as JSON (readable, but allocates and parses every frame)
 ## Notes
 
 - Coordinates are CSS pixels; `canvas.js` applies the device-pixel-ratio transform.
-- The command buffer is `float[]`, but the generated JavaScript interop `MemoryView`
+- The command buffer (`CommandBuffer`) holds `float` slots, but the generated JavaScript interop `MemoryView`
   supports `Span<byte|int|double>`, so it crosses the boundary as bytes and JS
   re-views it as `Float32Array`/`Uint32Array`.
 - Colors (`0xRRGGBBAA`) are stored as raw `uint` bits, never converted to `float`
@@ -112,13 +123,15 @@ or serializing commands as JSON (readable, but allocates and parses every frame)
   callback currently receives a `float`.
 - `Span` views are only valid for the duration of the interop call; `submit`
   copies with `slice()`.
-- Adding a primitive requires a new opcode in
-  `src/Gamewright/Gfx/Canvas.cs` and a matching case in
-  `src/Gamewright/wwwroot/js/canvas.js`.
+- Adding a primitive takes three steps: a member of the `Op` enum in `src/Gamewright/CommandBuffer.cs`, a
+  `Canvas` method that appends its operands, and, in `src/Gamewright/wwwroot/js/canvas.js`, the op's name in
+  `HANDLED` plus a matching `case`. Name it by what it does: `Fill*` paints an interior, `Stroke*` paints lines,
+  `Draw*` paints text and images. The opcode numbers come from the `Op` enum and are handed to JS at startup, so
+  never hard-code them; `canvas.js` throws on startup if the two sides disagree on the set of ops.
 - Images are retained resources behind immediate-mode draw calls. `resources.LoadImage(url)` returns an
   `Image` handle immediately and loads it asynchronously in the browser (`createImageBitmap`).
   `DrawImage`/`DrawSprite` calls are skipped until `image.IsReady`; after that they carry only the handle id
-  and rectangles (opcode 6). Request images in `IImmediateApp.LoadResources`, which `Renderer.StartAsync` calls
+  and rectangles (the `DrawImage` op). Request images in `IImmediateApp.LoadResources`, which `Renderer.StartAsync` calls
   once before the first frame, keep the handles in fields, and `Dispose` them to free the bitmap. `SpriteSheet` addresses a regular grid of cells as `sheet[column, row]`.
 - Avoid per-frame allocations (new strings, lambdas, `new SKPaint`-style objects):
   the WASM GC is not concurrent and stutters. For heavy frame logic, enable
