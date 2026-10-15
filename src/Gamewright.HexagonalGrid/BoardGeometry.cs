@@ -29,6 +29,43 @@ public readonly record struct BoardGeometry(Rect Bounds, int Radius, bool IsBoar
     internal HexGeometry.Hexagon HexCorners(Hex hex) =>
         HexGeometry.Corners(HexCenter(hex), HexagonCircumRadius, Orientation);
 
+    /// <summary>
+    /// Every distinct edge between hexagons, once. An edge shared by two hexagons is yielded by the one with the
+    /// lower index; board-border edges are yielded by their only hexagon.
+    /// </summary>
+    public IEnumerable<(Point A, Point B)> GridLines
+    {
+        get
+        {
+            var geometry = this;
+            foreach (var hex in GridHexes)
+            {
+                var corners = geometry.HexCorners(hex);
+                var neighbors = geometry.Orientation.EdgeNeighbors;
+                for (var i = 0; i < 6; i++)
+                {
+                    var neighbor = hex + neighbors[i];
+                    if (!HexMath.IsOnBoard(neighbor, Radius) || neighbor.Index > hex.Index)
+                    {
+                        yield return (corners[i], corners[(i + 1) % 6]);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary><see cref="GridLines"/> flattened to endpoint pairs <c>[a0, b0, a1, b1, …]</c>, e.g. for <c>Canvas.StrokeSegments</c>.</summary>
+    public Point[] GridLinePoints()
+    {
+        var points = new List<Point>(6 * HexesCount);
+        foreach (var (a, b) in GridLines)
+        {
+            points.Add(a);
+            points.Add(b);
+        }
+        return [.. points];
+    }
+
     /// <summary>The hexagon under <paramref name="point"/>, if it is on the board.</summary>
     public bool TryGetHex(Point point, out Hex hex)
     {

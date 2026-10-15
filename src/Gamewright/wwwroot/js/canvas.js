@@ -150,6 +150,7 @@ export const OpCode = Object.freeze({
   OpImage: 6,
   OpFillPolygon: 7,
   OpStrokePolygon: 8,
+  OpStrokeSegments: 9,
 });
 
 // Opcodes must match Canvas.cs.
@@ -269,6 +270,19 @@ export function submit(view) {
       case OpCode.OpStrokePolygon: {
         // StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
         i = polygonPath(f, i);
+        ctx.lineWidth = f[i++];
+        ctx.strokeStyle = cssColor(u[i++]);
+        ctx.stroke();
+        break;
+      }
+      case OpCode.OpStrokeSegments: {
+        // StrokeSegments n x0 y0 … x(n-1) y(n-1) lineWidth rgba, with n points forming n / 2 separate segments
+        const n = f[i++];
+        ctx.beginPath();
+        for (let k = 0; k < n; k += 2, i += 4) {
+          ctx.moveTo(f[i], f[i + 1]);
+          ctx.lineTo(f[i + 2], f[i + 3]);
+        }
         ctx.lineWidth = f[i++];
         ctx.strokeStyle = cssColor(u[i++]);
         ctx.stroke();

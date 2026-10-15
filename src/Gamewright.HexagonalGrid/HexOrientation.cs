@@ -29,6 +29,12 @@ static class HexOrientationExtensions
     private static readonly Matrix3x2 PointyInverse = Invert(PointyForward);
     private static readonly Matrix3x2 FlatInverse = Invert(FlatForward);
 
+    // Offset of the neighbor across edge i, where edge i joins corner i and corner i + 1 (see HexGeometry.Corners).
+    private static readonly HexOffset[] PointyEdgeNeighbors =
+        [new(0, 1, -1), new(-1, 1, 0), new(-1, 0, 1), new(0, -1, 1), new(1, -1, 0), new(1, 0, -1)];
+    private static readonly HexOffset[] FlatEdgeNeighbors =
+        [new(1, 0, -1), new(0, 1, -1), new(-1, 1, 0), new(-1, 0, 1), new(0, -1, 1), new(1, -1, 0)];
+
     private static Matrix3x2 Invert(Matrix3x2 m) =>
         Matrix3x2.Invert(m, out var inverse) ? inverse : throw new InvalidOperationException("Hex layout matrix is not invertible.");
 
@@ -38,6 +44,9 @@ static class HexOrientationExtensions
 
         /// <summary>Angle of the first corner, in multiples of 60°.</summary>
         public float StartAngle => orientation.IsPointyTop ? 0.5f : 0f;
+
+        /// <summary>The neighbor offsets across each of the six edges; entry i is across the edge from corner i to corner i + 1.</summary>
+        public IReadOnlyList<HexOffset> EdgeNeighbors => orientation.IsPointyTop ? PointyEdgeNeighbors : FlatEdgeNeighbors;
 
         /// <summary>Axial → pixel, for a hexagon of circumradius 1.</summary>
         public Matrix3x2 Forward => orientation.IsPointyTop ? PointyForward : FlatForward;

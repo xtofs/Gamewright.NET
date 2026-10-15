@@ -66,7 +66,6 @@ public sealed class HavannahApp : IImmediateApp
         {
             var corners = geo.HexCorners(hex);
             canvas.FillPolygon(corners, CellColors[hex.ColorClass]);
-            canvas.StrokePolygon(corners, 1.5f, CellOutline);
 
 #if SHOW_INDICATORS
             if (_game.Grid.TryGetCorner(hex, out var corner))
@@ -83,6 +82,9 @@ public sealed class HavannahApp : IImmediateApp
 #endif
 
         }
+
+        // Strokes go after all fills so no fill covers half of a line.
+        canvas.StrokeSegments(geo.GridLinePoints(), 1.5f, CellOutline);
 
         // highlight the cells that demonstrate each win
         foreach (var win in _game.Wins)

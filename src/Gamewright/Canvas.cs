@@ -15,7 +15,7 @@ public sealed class Canvas
 {
     // Opcodes must match the switch in canvas.js.
     const int OpClear = 0, OpRect = 1, OpCircle = 2, OpText = 3, OpStrokeRect = 4, OpLine = 5, OpImage = 6,
-              OpFillPolygon = 7, OpStrokePolygon = 8;
+              OpFillPolygon = 7, OpStrokePolygon = 8, OpStrokeSegments = 9;
 
     static Canvas()
     {
@@ -242,6 +242,23 @@ public sealed class Canvas
         }
 
         WritePolygon(OpStrokePolygon, points, tail: 2);
+        _buf[_n++] = lineWidth;
+        _buf[_n++] = ColorAsFloat(color);
+    }
+
+    /// <summary>
+    /// Strokes many separate line segments as a single path. <paramref name="endpoints"/> holds the segments as
+    /// pairs <c>[a0, b0, a1, b1, …]</c>; a trailing odd point is ignored and fewer than two points draw nothing.
+    /// </summary>
+    public void StrokeSegments(ReadOnlySpan<Point> endpoints, float lineWidth, Color color)
+    {
+        endpoints = endpoints[..(endpoints.Length & ~1)];
+        if (endpoints.Length == 0)
+        {
+            return;
+        }
+
+        WritePolygon(OpStrokeSegments, endpoints, tail: 2);
         _buf[_n++] = lineWidth;
         _buf[_n++] = ColorAsFloat(color);
     }
