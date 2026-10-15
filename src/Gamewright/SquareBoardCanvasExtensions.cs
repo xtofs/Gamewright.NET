@@ -16,7 +16,7 @@ public static class SquareBoardCanvasExtensions
             canvas.FillRect(rect, square.IsDark ? dark : light);
             if (showSquareNames)
             {
-                canvas.Text(square.ToString(), rect.Center, 18, Colors.Black);
+                canvas.DrawText(square.ToString(), rect.Center, 18, Colors.Black);
             }
         }
 
@@ -27,14 +27,14 @@ public static class SquareBoardCanvasExtensions
         for (int row = 0; row < geo.Rows; row++)
         {
             var name = SquareLabels.Row(row);
-            canvas.Text(name, geo.RowLabelRect(row, left: true).Center, fontSize, color);
-            canvas.Text(name, geo.RowLabelRect(row, left: false).Center, fontSize, color);
+            canvas.DrawText(name, geo.RowLabelRect(row, left: true).Center, fontSize, color);
+            canvas.DrawText(name, geo.RowLabelRect(row, left: false).Center, fontSize, color);
         }
         for (int column = 0; column < geo.Columns; column++)
         {
             var name = SquareLabels.Column(column);
-            canvas.Text(name, geo.ColumnLabelRect(column, top: true).Center, fontSize, color);
-            canvas.Text(name, geo.ColumnLabelRect(column, top: false).Center, fontSize, color);
+            canvas.DrawText(name, geo.ColumnLabelRect(column, top: true).Center, fontSize, color);
+            canvas.DrawText(name, geo.ColumnLabelRect(column, top: false).Center, fontSize, color);
         }
     }
 }

@@ -23,7 +23,7 @@ public sealed class Canvas
 
     public void FillRect(Rect rect, Color color)
     {
-        _cmd.AddOpCode(Op.Rect).AddRect(rect).AddColor(color);
+        _cmd.AddOpCode(Op.FillRect).AddRect(rect).AddColor(color);
     }
 
     public void StrokeRect(Rect rect, float lineWidth, Color color)
@@ -31,22 +31,22 @@ public sealed class Canvas
         _cmd.AddOpCode(Op.StrokeRect).AddRect(rect).AddFloat(lineWidth).AddColor(color);
     }
 
-    public void Line(Point p1, Point p2, float lineWidth, Color color) =>
-        _cmd.AddOpCode(Op.Line).AddPoint(p1).AddPoint(p2).AddFloat(lineWidth).AddColor(color);
+    public void StrokeLine(Point p1, Point p2, float lineWidth, Color color) =>
+        _cmd.AddOpCode(Op.StrokeLine).AddPoint(p1).AddPoint(p2).AddFloat(lineWidth).AddColor(color);
 
-    public void Line(float x1, float y1, float x2, float y2, float lineWidth, Color color) =>
-        Line(new Point(x1, y1), new Point(x2, y2), lineWidth, color);
+    public void StrokeLine(float x1, float y1, float x2, float y2, float lineWidth, Color color) =>
+        StrokeLine(new Point(x1, y1), new Point(x2, y2), lineWidth, color);
 
-    public void Circle(Point center, float r, Color color)
-        => Circle(center.X, center.Y, r, color);
+    public void FillCircle(Point center, float r, Color color)
+        => FillCircle(center.X, center.Y, r, color);
 
-    public void Circle(float x, float y, float r, Color color) =>
-        _cmd.AddOpCode(Op.Circle).AddPoint(new Point(x, y)).AddFloat(r).AddColor(color);
+    public void FillCircle(float x, float y, float r, Color color) =>
+        _cmd.AddOpCode(Op.FillCircle).AddPoint(new Point(x, y)).AddFloat(r).AddColor(color);
 
     /// <summary>Centered text. Strings are interned: each distinct string crosses to JS once.
     /// Avoid building a new string every frame (e.g. $"t={time}"), or the table grows unbounded.</summary>
-    public void Text(string s, Point point, float fontSize, Color color) =>
-        _cmd.AddOpCode(Op.Text).AddString(s).AddPoint(point).AddFloat(fontSize).AddColor(color);
+    public void DrawText(string s, Point point, float fontSize, Color color) =>
+        _cmd.AddOpCode(Op.DrawText).AddString(s).AddPoint(point).AddFloat(fontSize).AddColor(color);
 
     // ---- Images -----------------------------------------------------------------------------
     // Loading is asynchronous and happens outside the command stream: LoadImage queues a request that
@@ -106,7 +106,7 @@ public sealed class Canvas
             return;     // still loading (or failed): draw nothing
         }
 
-        _cmd.AddOpCode(Op.Image).AddInt(image.Id).AddRect(source).AddRect(dest)
+        _cmd.AddOpCode(Op.DrawImage).AddInt(image.Id).AddRect(source).AddRect(dest)
             .AddFloat(Math.Clamp(alpha, 0f, 1f))
             .AddFloat(pixelated ? 1f : 0f);   // flags: bit 0 = pixelated
     }

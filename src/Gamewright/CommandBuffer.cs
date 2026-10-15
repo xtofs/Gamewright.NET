@@ -10,15 +10,21 @@ using System.Runtime.InteropServices;
 internal enum Op
 {
     Clear = 0,
-    Rect = 1,
-    Circle = 2,
-    Text = 3,
+
+    // Fill*: paint the interior of a shape.
+    FillRect = 1,
+    FillCircle = 2,
+    FillPolygon = 3,
+
+    // Stroke*: paint lines (a shape's outline, or free lines) with a line width.
     StrokeRect = 4,
-    Line = 5,
-    Image = 6,
-    FillPolygon = 7,
-    StrokePolygon = 8,
-    StrokeSegments = 9,
+    StrokeLine = 5,
+    StrokeSegments = 6,
+    StrokePolygon = 7,
+
+    // Draw*: paint content that is not a plain shape.
+    DrawText = 8,
+    DrawImage = 9,
 }
 
 /// <summary>

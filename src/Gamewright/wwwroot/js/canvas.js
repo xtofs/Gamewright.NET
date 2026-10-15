@@ -146,15 +146,15 @@ function polygonPath(f, i) {
 const OpCode = {};
 const HANDLED = [
   "Clear",
-  "Rect",
-  "Circle",
-  "Text",
-  "StrokeRect",
-  "Line",
-  "Image",
+  "FillRect",
+  "FillCircle",
   "FillPolygon",
-  "StrokePolygon",
+  "StrokeRect",
+  "StrokeLine",
   "StrokeSegments",
+  "StrokePolygon",
+  "DrawText",
+  "DrawImage",
 ];
 
 // "Clear=0,Rect=1,…" -> OpCode, verified against HANDLED in both directions.
@@ -196,7 +196,7 @@ export function submit(view) {
         ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         break;
       }
-      case OpCode.Rect: {
+      case OpCode.FillRect: {
         // Rect x y w h rgba
         const x = f[i++];
         const y = f[i++];
@@ -207,7 +207,7 @@ export function submit(view) {
         ctx.fillRect(x, y, w, h);
         break;
       }
-      case OpCode.Circle: {
+      case OpCode.FillCircle: {
         // Circle x y r rgba
         const x = f[i++],
           y = f[i++],
@@ -218,7 +218,7 @@ export function submit(view) {
         ctx.fill();
         break;
       }
-      case OpCode.Text: {
+      case OpCode.DrawText: {
         // Text strId x y size rgba (centered)
         const s = strings[f[i++]],
           x = f[i++],
@@ -243,7 +243,7 @@ export function submit(view) {
         ctx.strokeRect(x, y, w, h);
         break;
       }
-      case OpCode.Line: {
+      case OpCode.StrokeLine: {
         // Line x1, y1, x2, y2 lineWidth rgba
         const x1 = f[i++],
           y1 = f[i++],
@@ -258,7 +258,7 @@ export function submit(view) {
         ctx.stroke();
         break;
       }
-      case OpCode.Image: {
+      case OpCode.DrawImage: {
         // Image id sx sy sw sh dx dy dw dh alpha flags (flags bit 0 = pixelated)
         const bitmap = images[f[i++]],
           sx = f[i++],

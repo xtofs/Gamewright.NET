@@ -71,7 +71,7 @@ public sealed class ChessApp : IImmediateApp
 
         // Pointer follower.
         var pos = pointer.Clamp(io.Rect);
-        canvas.Circle(pos.X, pos.Y, 8, new Color(0x4F, 0xC3, 0xF7, 0xFF));
+        canvas.FillCircle(pos.X, pos.Y, 8, new Color(0x4F, 0xC3, 0xF7, 0xFF));
     }
 
     /// <summary>First click selects a square; the second click moves the selected piece there (or just deselects).</summary>

@@ -70,12 +70,12 @@ public sealed class HavannahApp : IImmediateApp
 #if SHOW_INDICATORS
             if (_game.Grid.TryGetCorner(hex, out var corner))
             {
-                canvas.Circle(center, 20, Colors.IndianRed);
+                canvas.FillCircle(center, 20, Colors.IndianRed);
                 BearingIndicator(canvas, center, corner.Bearing());
             }
             if (_game.Grid.TryGetEdge(hex, out var edge))
             {
-                canvas.Circle(center, 20, Colors.OrangeRed);
+                canvas.FillCircle(center, 20, Colors.OrangeRed);
 
                 BearingIndicator(canvas, center, edge.Bearing());
             }
@@ -113,9 +113,9 @@ public sealed class HavannahApp : IImmediateApp
     private static void BearingIndicator(Canvas canvas, Point center, float angle)
     {
         var label = $"{float.RadiansToDegrees(angle):F0}°";
-        canvas.Text(label, center, 12, Colors.Black);
+        canvas.DrawText(label, center, 12, Colors.Black);
         var e = center + 20 * Compass(angle);
-        canvas.Line(center, e, 3, Colors.Black);
+        canvas.StrokeLine(center, e, 3, Colors.Black);
     }
 
     /// <summary>Unit vector for a compass bearing (radians clockwise from up; screen y points down).</summary>

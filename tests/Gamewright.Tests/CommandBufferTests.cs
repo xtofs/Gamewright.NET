@@ -10,8 +10,8 @@ public class CommandBufferTests
     public void AddsSlotsInOrder()
     {
         var buffer = new CommandBuffer();
-        buffer.AddOpCode(Op.Line).AddFloat(1.5f).AddInt(7).AddPoint(new Point(2, 3)).AddRect(new Rect(4, 5, 6, 8));
-        Assert.Equal([5f, 1.5f, 7f, 2f, 3f, 4f, 5f, 6f, 8f], buffer.Span.ToArray());
+        buffer.AddOpCode(Op.StrokeLine).AddFloat(1.5f).AddInt(7).AddPoint(new Point(2, 3)).AddRect(new Rect(4, 5, 6, 8));
+        Assert.Equal([(float)Op.StrokeLine, 1.5f, 7f, 2f, 3f, 4f, 5f, 6f, 8f], buffer.Span.ToArray());
     }
 
     [Fact]

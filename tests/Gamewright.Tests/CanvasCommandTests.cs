@@ -7,10 +7,11 @@ namespace Gamewright.Tests;
 public class CanvasCommandTests
 {
     // opcodes, as defined by Op in CommandBuffer.cs (canvas.js gets the numbers from there at startup)
-    const float Clear = (float)Op.Clear, Rect = (float)Op.Rect, Circle = (float)Op.Circle, Text = (float)Op.Text,
-                StrokeRect = (float)Op.StrokeRect, Line = (float)Op.Line, Image = (float)Op.Image,
-                FillPolygon = (float)Op.FillPolygon, StrokePolygon = (float)Op.StrokePolygon,
-                StrokeSegments = (float)Op.StrokeSegments;
+    const float Clear = (float)Op.Clear, FillRect = (float)Op.FillRect, FillCircle = (float)Op.FillCircle,
+                FillPolygon = (float)Op.FillPolygon, StrokeRect = (float)Op.StrokeRect,
+                StrokeLine = (float)Op.StrokeLine, StrokeSegments = (float)Op.StrokeSegments,
+                StrokePolygon = (float)Op.StrokePolygon, DrawText = (float)Op.DrawText,
+                DrawImage = (float)Op.DrawImage;
 
     static readonly Color Red = new(0xFF, 0x10, 0x20, 0x80);
     static readonly Color Blue = new(0x01, 0x02, 0xFF);
@@ -43,7 +44,7 @@ public class CanvasCommandTests
     {
         var canvas = new Canvas();
         canvas.FillRect(new Rect(1, 2, 3, 4), Red);
-        Assert.Equal(Slots(Rect, 1f, 2f, 3f, 4f, Red), Emitted(canvas));
+        Assert.Equal(Slots(FillRect, 1f, 2f, 3f, 4f, Red), Emitted(canvas));
     }
 
     [Fact]
@@ -55,49 +56,49 @@ public class CanvasCommandTests
     }
 
     [Fact]
-    public void Line_()
+    public void StrokeLine_()
     {
         var canvas = new Canvas();
-        canvas.Line(new Point(1, 2), new Point(3, 4), 1.5f, Red);
-        Assert.Equal(Slots(Line, 1f, 2f, 3f, 4f, 1.5f, Red), Emitted(canvas));
+        canvas.StrokeLine(new Point(1, 2), new Point(3, 4), 1.5f, Red);
+        Assert.Equal(Slots(StrokeLine, 1f, 2f, 3f, 4f, 1.5f, Red), Emitted(canvas));
     }
 
     [Fact]
-    public void Circle_()
+    public void FillCircle_()
     {
         var canvas = new Canvas();
-        canvas.Circle(new Point(1, 2), 3f, Blue);
-        Assert.Equal(Slots(Circle, 1f, 2f, 3f, Blue), Emitted(canvas));
+        canvas.FillCircle(new Point(1, 2), 3f, Blue);
+        Assert.Equal(Slots(FillCircle, 1f, 2f, 3f, Blue), Emitted(canvas));
     }
 
     [Fact]
-    public void Text_InternsEachStringOnce()
+    public void DrawText_InternsEachStringOnce()
     {
         var canvas = new Canvas();
-        canvas.Text("a", new Point(1, 2), 12f, Red);
-        canvas.Text("b", new Point(3, 4), 14f, Blue);
-        canvas.Text("a", new Point(5, 6), 16f, Red);
+        canvas.DrawText("a", new Point(1, 2), 12f, Red);
+        canvas.DrawText("b", new Point(3, 4), 14f, Blue);
+        canvas.DrawText("a", new Point(5, 6), 16f, Red);
 
         Assert.Equal(Slots(
-            Text, 0, 1f, 2f, 12f, Red,
-            Text, 1, 3f, 4f, 14f, Blue,
-            Text, 0, 5f, 6f, 16f, Red), Emitted(canvas));
+            DrawText, 0, 1f, 2f, 12f, Red,
+            DrawText, 1, 3f, 4f, 14f, Blue,
+            DrawText, 0, 5f, 6f, 16f, Red), Emitted(canvas));
         Assert.Equal([(0, "a"), (1, "b")], canvas.NewStrings);
     }
 
     [Fact]
-    public void Text_StringTableSurvivesReset()
+    public void DrawText_StringTableSurvivesReset()
     {
         var canvas = new Canvas();
-        canvas.Text("a", new Point(0, 0), 1f, Red);
+        canvas.DrawText("a", new Point(0, 0), 1f, Red);
         canvas.NewStrings.Clear();   // what the Renderer does after sending them
         canvas.Reset();
-        canvas.Text("a", new Point(0, 0), 1f, Red);
-        canvas.Text("c", new Point(0, 0), 1f, Red);
+        canvas.DrawText("a", new Point(0, 0), 1f, Red);
+        canvas.DrawText("c", new Point(0, 0), 1f, Red);
 
         Assert.Equal(Slots(
-            Text, 0, 0f, 0f, 1f, Red,
-            Text, 1, 0f, 0f, 1f, Red), Emitted(canvas));
+            DrawText, 0, 0f, 0f, 1f, Red,
+            DrawText, 1, 0f, 0f, 1f, Red), Emitted(canvas));
         Assert.Equal([(1, "c")], canvas.NewStrings);
     }
 
@@ -160,7 +161,7 @@ public class CanvasCommandTests
         canvas.ImageLoaded(image.Id, 20, 30);
         canvas.DrawImage(image, new Rect(1, 2, 3, 4), new Rect(5, 6, 7, 8), alpha: 2f, pixelated: true);
         // alpha is clamped to 1; flags bit 0 = pixelated
-        Assert.Equal(Slots(Image, image.Id, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 1f, 1f), Emitted(canvas));
+        Assert.Equal(Slots(DrawImage, image.Id, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 1f, 1f), Emitted(canvas));
     }
 
     [Fact]
@@ -169,13 +170,13 @@ public class CanvasCommandTests
         var canvas = new Canvas();
         for (var i = 0; i < 2000; i++)
         {
-            canvas.Line(new Point(i, i), new Point(i + 1, i + 1), 1f, Red);
+            canvas.StrokeLine(new Point(i, i), new Point(i + 1, i + 1), 1f, Red);
         }
 
         var slots = Emitted(canvas);
         Assert.Equal(2000 * 7, slots.Length);
-        Assert.Equal(Slots(Line, 1999f, 1999f, 2000f, 2000f, 1f, Red), slots[^7..]);
-        Assert.Equal(Slots(Line, 0f, 0f, 1f, 1f, 1f, Red), slots[..7]);
+        Assert.Equal(Slots(StrokeLine, 1999f, 1999f, 2000f, 2000f, 1f, Red), slots[^7..]);
+        Assert.Equal(Slots(StrokeLine, 0f, 0f, 1f, 1f, 1f, Red), slots[..7]);
     }
 
     [Fact]
