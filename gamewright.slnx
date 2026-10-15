@@ -9,6 +9,7 @@
     <Project Path="tests/Gamewright.Primitives.Tests/Gamewright.Primitives.Tests.csproj" />
     <Project Path="tests/Gamewright.SquareGrid.Tests/Gamewright.SquareGrid.Tests.csproj" />
     <Project Path="tests/Gamewright.HexagonalGrid.Tests/Gamewright.HexagonalGrid.Tests.csproj" />
+    <Project Path="tests/Havannah.Tests/Havannah.Tests.csproj" />
   </Folder>
   <Project Path="src/Chess/Chess.csproj" />
   <Project Path="src/Havannah/Havannah.csproj" />

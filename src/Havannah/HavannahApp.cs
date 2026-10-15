@@ -18,7 +18,6 @@ public sealed class HavannahApp : IImmediateApp
     private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.59987f, s: 0.013f);
 
     private SpriteAtlas<HavannahPiece> _pieces = default!; // Sprite atlas for game pieces loaded in LoadResources
-    private Region<HavannahPiece>? _highlightedRegion;
 
     public HavannahApp()
     {
@@ -57,23 +56,6 @@ public sealed class HavannahApp : IImmediateApp
             if (geo.TryGetHex(pointer, out var clicked) && _game[clicked] == null)
             {
                 _game.Play(clicked);
-                var found = HavannahStructures.FindRegion(_game.Grid, clicked);
-                // three connected edges indicate a winning region
-                if (found.Edges.Count >= 3)
-                {
-                    _highlightedRegion = found;
-                }
-                // two connected corners indicate a winning region
-                if (found.Corners.Count >= 2)
-                {
-                    _highlightedRegion = found;
-                }
-                // a connected region of same‑colored hexagons whose adjacency graph contains a loop 
-                // that encloses at least one cell not of that color.
-                // if (found.IsRing)
-                // {
-                //     _highlightedRegion = found;
-                // }
             }
         }
 
@@ -102,12 +84,11 @@ public sealed class HavannahApp : IImmediateApp
 
         }
 
-        // draw the highlighted region
-        if (_highlightedRegion is { } region && region.Members.Count > 0)
+        // highlight the cells that demonstrate each win
+        foreach (var win in _game.Wins)
         {
-            foreach (var hex in region.Members)
+            foreach (var hex in win.Cells)
             {
-                var center = geo.HexCenter(hex);
                 var corners = geo.HexCorners(hex);
                 canvas.FillPolygon(corners, Colors.Yellow.WithAlpha(0.3f));
             }

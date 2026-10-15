@@ -22,6 +22,9 @@ public class HavannahGame(int radius = 8)
 
     private HavannahPiece _activePlayer = HavannahPiece.Red;
 
+    /// <summary>The wins created by the most recent move; empty if it did not win.</summary>
+    public IReadOnlyList<Win<HavannahPiece>> Wins { get; private set; } = [];
+
     public HavannahPiece? this[Hex hex]
     {
         get => _grid[hex];
@@ -34,6 +37,7 @@ public class HavannahGame(int radius = 8)
             throw new InvalidOperationException("Cell is already occupied.");
         }
         _grid.Place(hex, _activePlayer);
+        Wins = HavannahStructures.FindWins(_grid, hex);
         _activePlayer = _activePlayer.Opponent;
 
     }
