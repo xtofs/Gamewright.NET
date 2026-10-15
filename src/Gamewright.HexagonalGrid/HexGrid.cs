@@ -3,8 +3,8 @@ namespace Gamewright.HexagonalGrid;
 
 /// <summary>
 /// A "circular" hexagonal grid representation made from pointy-top hexagons.
-/// Each hexagon is at most <see cref="Radius"/> hexagons away from the center hexagon. 
-/// (0 is the degenerate case with just one hexagon)
+/// <see cref="Radius"/> is the number of cells along each edge of the board, so every hexagon is at most
+/// <c>Radius - 1</c> steps away from the center hexagon. (1 is the degenerate case with just one hexagon.)
 /// </summary>
 /// <remarks>
 /// The grid tracks occupancy itself, so <typeparamref name="T"/> only describes real pieces
@@ -136,9 +136,10 @@ public class HexGrid<T> where T : struct
     public string Format(Func<T, char> symbol)
     {
         var totalLength = 0;
-        for (var r = Radius; r >= -Radius; r--)
+        var outerRing = Radius - 1;
+        for (var r = outerRing; r >= -outerRing; r--)
         {
-            var (pMin, pMax) = HexRowRange(Radius, r);
+            var (pMin, pMax) = HexRowRange(outerRing, r);
             var cellsInRow = pMax - pMin + 1;
             totalLength += Math.Abs(r) + (cellsInRow * 2) + 1;
         }
@@ -147,7 +148,8 @@ public class HexGrid<T> where T : struct
         {
             var cursor = 0;
             // the second component, r, is the row
-            for (var row = grid.Radius; row >= -grid.Radius; row--)
+            var outerRing = grid.Radius - 1;
+            for (var row = outerRing; row >= -outerRing; row--)
             {
                 // indent for the current row based on its distance from the center
                 for (var i = 0; i < Math.Abs(row); i++)
@@ -155,7 +157,7 @@ public class HexGrid<T> where T : struct
                     span[cursor++] = ' ';
                 }
                 // iterate over the columns in the current row
-                var (pMin, pMax) = HexRowRange(grid.Radius, row);
+                var (pMin, pMax) = HexRowRange(outerRing, row);
                 for (var p = pMin; p <= pMax; p++)
                 {
                     var hex = new Hex(p, -(p + row), row);
@@ -224,7 +226,6 @@ public class HexGrid<T> where T : struct
         return false;
     }
 
-    [Obsolete("Use hex.Index directly instead.")]
     private int IndexOf(Hex hex) => Contains(hex)
             ? hex.Index
             : throw new ArgumentOutOfRangeException(nameof(hex), hex, $"Not within a grid of radius {Radius}.");

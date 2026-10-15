@@ -248,13 +248,6 @@ public static class HexMath
     //     }
     // }
 
-    [Obsolete("Use IsOnBoard instead.")]
-    internal static bool IsWithin(Hex hex, int radius)
-    {
-        return hex.Ring <= radius;
-    }
-
-
     /// <summary>True when <paramref name="hex"/> lies on a board of the given radius (see <see cref="HexagonCount"/>).</summary>
     public static bool IsOnBoard(Hex hex, int radius) => RingOfCube(hex) < radius;
 
