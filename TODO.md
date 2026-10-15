@@ -21,19 +21,6 @@ Link the code involved so an item can be picked up cold.
   Explore parameterizing the types statically, `HexGrid<TPiece, TOrientation>`, with two empty
   `TOrientation` implementations for pointy-top and flat-top.
 
-- [ ] **Generalize paths, modeled on HTML Canvas2D.**
-  Polygons, lines and segments (`FillPolygon`, `StrokePolygon`, `StrokeSegments`, `StrokeLine`) were designed
-  ad hoc, while Canvas2D is more disciplined. Make the path API resemble it: a path is a list of
-  `MoveTo`, `LineTo`, `QuadraticCurveTo`, `Arc` and `ClosePath` commands, e.g.
-
-  ```text
-  { cmd: MoveTo, x: 10, y: 10 }
-  { cmd: LineTo, x: 100, y: 10 }
-  { cmd: QuadraticCurveTo, cpx: 150, cpy: 50, x: 100, y: 100 }
-  { cmd: Arc, cx: 50, cy: 50, r: 40, start: 0, end: π }
-  { cmd: ClosePath }
-  ```
-
 ## Housekeeping
 
 - [ ] **Audit `InternalsVisibleTo`.**
@@ -44,3 +31,7 @@ Link the code involved so an item can be picked up cold.
 
 - [x] **Bring the root [README](README.md) up to date.** Paths, project table, per-frame flow, how to add a
   primitive and the command buffer note now match the code.
+- [x] **Generalize paths, modeled on HTML Canvas2D.** Geometry is now a `Path2D` (move, line, quadratic and
+  Bézier curves, ellipse, close) filled or stroked with `Canvas.Fill`/`Stroke`; rectangles, circles, ellipses,
+  polygons and segments are built from it in C#. Not done: Canvas2D state (transforms, clipping, dashes) and
+  retained `Path2D` objects on the JS side.

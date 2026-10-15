@@ -19,8 +19,9 @@ Open the URL it prints. (`.claude/launch.json` has ready-made configurations for
 ```plain
 Renderer.StartAsync (once)
   ├─ app.LoadResources(loader)    runs before the frame loop; image loads are only queued here
-  ├─ Init(canvasId, ..., opCodes) .NET → JS   starts the rAF loop (its first frame runs later); opCodes is the
-  │                                           Op enum as "Name=Number" pairs, which canvas.js checks at startup
+  ├─ Init(canvasId, ..., opCodes, pathVerbs)  .NET → JS   starts the rAF loop (its first frame runs later); the
+  │                                           OpCode and PathVerb enums as "Name=Number" tables, which canvas.js
+  │                                           checks at startup
   └─ LoadImage(id, url)           .NET → JS   hands the queued loads to JS, before the first frame
 ```
 
@@ -43,7 +44,8 @@ rAF tick (JS)
 | `src/Gamewright/` | The reusable library (a Razor Class Library): rendering, input, resources and layout |
 | `src/Gamewright/Renderer.cs` | Owns the frame callback: input in, commands out, image loads forwarded to JS |
 | `src/Gamewright/Canvas.cs` | The drawing API apps call: `Fill*`, `Stroke*` and `Draw*` methods, each appending to the command buffer |
-| `src/Gamewright/CommandBuffer.cs` | The per-frame slot buffer, string interning, and the `Op` enum (the single definition of the opcodes) |
+| `src/Gamewright/Path2D.cs`, `PathVerb.cs` | Paths in the style of Canvas2D (move, line, curves, ellipse, close) and the shapes built from them in C#: rectangle, rounded rectangle, circle, polygon, … |
+| `src/Gamewright/CommandBuffer.cs`, `OpCode.cs` | The per-frame slot buffer with string interning, and the `OpCode` enum (the single definition of the opcodes) |
 | `src/Gamewright/CanvasInterop.cs` | `[JSImport]` bindings using generated marshalling, not `IJSRuntime` |
 | `src/Gamewright/IImmediateApp.cs`, `Input.cs` | What an app implements (`LoadResources`, `RenderFrame`) and what it receives each frame |
 | `src/Gamewright/Resources/` | `ResourceLoader`, `Image`, `Sprite`, `SpriteSheet`, `SpriteAtlas` |
@@ -83,15 +85,24 @@ mechanism, not that type.)
 - **JS holds no application state.** It owns the frame loop, input capture and replay; .NET decides what is
   drawn. There is no retained scene to keep in sync, which is the point of immediate mode.
 - **Room for batching.** Because commands are data, several can be merged into one: `StrokeSegments` strokes
-  the whole hex grid as a single path, so shared edges are drawn once.
+  the whole hex grid as a single path, so shared edges are drawn once. More generally, geometry is always a
+  `Path2D` built in C#, as in Canvas2D, so JS only needs two shape commands (fill a path, stroke a path) and a
+  new shape (ellipse, rounded rectangle, …) needs no JS at all.
 
 **Cons**
 
 - **The protocol is untyped and positional.** An operand missing or added on one side shifts every command
-  after it, and the symptom is garbled drawing far from the cause. Today the layout of each command is
-  written down twice, by hand: in `Canvas` and in the matching `case` in `canvas.js`. The opcode numbers are
-  not duplicated (C# hands the table to JS, which checks it at startup), but the operand layouts are.
-- **Every primitive touches three places:** the `Op` enum, a `Canvas` method and a `case` in `canvas.js`.
+  after it, and the symptom is garbled drawing far from the cause. The layout of each command is still written
+  down twice, by hand: in `Canvas` and in the matching `case` in `canvas.js`. Opcode and path-verb numbers are
+  not duplicated (C# hands the tables to JS, which checks them at startup, including how many operands each
+  path verb has), and a path carries its slot count, so a desync inside a path is detected. The layouts of the
+  few commands (`Clear`, `FillPath`, `StrokePath`, `DrawText`, `DrawImage`) are what remains to keep in step.
+- **Only new kinds of command touch three places** (the `OpCode` enum, a `Canvas` method, a `case` in
+  `canvas.js`). New shapes do not, since they are built from path verbs in C#. A new path verb touches the
+  `PathVerb` enum and `canvas.js`.
+- **A path costs more slots than a dedicated shape op.** Each verb takes a slot besides its operands: for the
+  Havannah board at radius 8 a frame went from about 4.7k to about 7.0k slots, and the frame time rose by roughly
+  0.6 ms (about 6.7 ms to 7.3 ms in the browser).
 - **Awkward encoding.** Everything is a 32-bit slot. Integers (counts, ids) are only exact below 2^24, colors
   must travel as raw `uint` bits and be read through a second view of the same memory, and strings and images
   need their own side channels (`DefineString`, `LoadImage`/`FreeImage`), so a frame is not fully described by
@@ -123,11 +134,15 @@ or serializing commands as JSON (readable, but allocates and parses every frame)
   callback currently receives a `float`.
 - `Span` views are only valid for the duration of the interop call; `submit`
   copies with `slice()`.
-- Adding a primitive takes three steps: a member of the `Op` enum in `src/Gamewright/CommandBuffer.cs`, a
-  `Canvas` method that appends its operands, and, in `src/Gamewright/wwwroot/js/canvas.js`, the op's name in
-  `HANDLED` plus a matching `case`. Name it by what it does: `Fill*` paints an interior, `Stroke*` paints lines,
-  `Draw*` paints text and images. The opcode numbers come from the `Op` enum and are handed to JS at startup, so
-  never hard-code them; `canvas.js` throws on startup if the two sides disagree on the set of ops.
+- Adding a shape needs no JS: build it as a `Path2D` (see the `Rect`, `RoundedRect`, `Circle` and `Polygon`
+  builders in `src/Gamewright/Path2D.cs`) and add a `Canvas` method that fills or strokes it. Name it by what it
+  does: `Fill*` paints an interior, `Stroke*` paints lines, `Draw*` paints text and images.
+- Adding a new kind of command (rare) takes three steps: a member of the `OpCode` enum in
+  `src/Gamewright/OpCode.cs`, a `Canvas` method that appends its operands, and, in
+  `src/Gamewright/wwwroot/js/canvas.js`, the op's name in `HANDLED_OPS` plus a matching `case`. A new path verb is a
+  `PathVerb` member (with its operand count in `PathVerbs.Operands`) plus an entry in `HANDLED_VERBS` and a `case`
+  in `buildPath`. The numbers come from the enums and are handed to JS at startup, so never hard-code them;
+  `canvas.js` throws on startup if the two sides disagree on the set of ops or verbs or on operand counts.
 - Images are retained resources behind immediate-mode draw calls. `resources.LoadImage(url)` returns an
   `Image` handle immediately and loads it asynchronously in the browser (`createImageBitmap`).
   `DrawImage`/`DrawSprite` calls are skipped until `image.IsReady`; after that they carry only the handle id

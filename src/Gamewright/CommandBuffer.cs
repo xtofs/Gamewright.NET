@@ -4,30 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 /// <summary>
-/// Draw commands, as sent to canvas.js. The names and numbers are the single source of truth: the table
-/// is handed to JS when the canvas starts (see <see cref="CommandBuffer.OpCodeTable"/>).
-/// </summary>
-internal enum Op
-{
-    Clear = 0,
-
-    // Fill*: paint the interior of a shape.
-    FillRect = 1,
-    FillCircle = 2,
-    FillPolygon = 3,
-
-    // Stroke*: paint lines (a shape's outline, or free lines) with a line width.
-    StrokeRect = 4,
-    StrokeLine = 5,
-    StrokeSegments = 6,
-    StrokePolygon = 7,
-
-    // Draw*: paint content that is not a plain shape.
-    DrawText = 8,
-    DrawImage = 9,
-}
-
-/// <summary>
 /// Growable buffer of 32-bit command slots for one frame. Numbers are stored as float; colors (0xRRGGBBAA)
 /// are stored as raw uint bits and never pass through a float. Every Add method makes its own room, so callers
 /// only say what a command consists of and never count slots. JSImport MemoryView only supports
@@ -59,11 +35,11 @@ internal sealed class CommandBuffer
     /// <summary>Starts a new frame. Keeps the capacity and the string table (JS remembers sent strings).</summary>
     public void Reset() => _cursor = 0;
 
-    /// <summary>"Name=Number" pairs for every <see cref="Op"/>, for JS to build its opcode table from.</summary>
+    /// <summary>"Name=Number" pairs for every <see cref="OpCode"/>, for JS to build its opcode table from.</summary>
     public static string OpCodeTable =>
-        string.Join(',', Enum.GetValues<Op>().Select(op => $"{op}={(int)op}"));
+        string.Join(',', Enum.GetValues<OpCode>().Select(op => $"{op}={(int)op}"));
 
-    public CommandBuffer AddOpCode(Op op) => AddInt((int)op);
+    public CommandBuffer AddOpCode(OpCode op) => AddInt((int)op);
 
     public CommandBuffer AddFloat(float value)
     {
@@ -114,6 +90,17 @@ internal sealed class CommandBuffer
         Reserve(floats.Length);
         floats.CopyTo(_buffer.AsSpan(_cursor));
         _cursor += floats.Length;
+        return this;
+    }
+
+    /// <summary>The number of slots of <paramref name="path"/>, then the slots themselves (one bulk copy).</summary>
+    public CommandBuffer AddPath(Path2D path)
+    {
+        var slots = path.Slots;
+        AddInt(slots.Length);
+        Reserve(slots.Length);
+        slots.CopyTo(_buffer.AsSpan(_cursor));
+        _cursor += slots.Length;
         return this;
     }
 

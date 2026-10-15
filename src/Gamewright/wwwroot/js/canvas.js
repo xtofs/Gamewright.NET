@@ -20,8 +20,8 @@ const images = []; // id -> ImageBitmap, filled by loadImage
 const loading = new Set(); // ids whose load is still in flight
 let imageLoadedCb; // .NET callback (id, width, height); width 0 means the load failed
 
-export function init(canvasId, frame, imageLoaded, opCodes) {
-  defineOpCodes(opCodes);
+export function init(canvasId, frame, imageLoaded, opCodes, pathVerbs) {
+  defineTables(opCodes, pathVerbs);
   canvas = document.getElementById(canvasId);
   ctx = canvas.getContext("2d");
   frameCb = frame;
@@ -128,51 +128,104 @@ function cssColor(v) {
   return `rgba(${r} ${g} ${b} / ${a})`;
 }
 
-// Reads "n x0 y0 … x(n-1) y(n-1)" starting at f[i] and builds a closed path from it.
-// Returns the index just past the last coordinate, so the caller continues with the fixed tail.
-function polygonPath(f, i) {
-  const n = f[i++];
-  ctx.beginPath();
-  ctx.moveTo(f[i], f[i + 1]);
-  for (let k = 1; k < n; k++) {
-    ctx.lineTo(f[i + 2 * k], f[i + 2 * k + 1]);
+// Opcode and path verb numbers belong to the OpCode and PathVerb enums in .NET. .NET hands them over in init, and
+// init checks that this file and .NET agree on the set of ops and verbs and on how many operands each verb has,
+// so a mismatch fails at startup instead of mid-frame.
+const OpCode = {};
+const HANDLED_OPS = ["Clear", "FillPath", "StrokePath", "DrawText", "DrawImage"];
+
+const PathVerb = {};
+// verb -> number of operand slots that follow it
+const HANDLED_VERBS = {
+  MoveTo: 2,
+  LineTo: 2,
+  QuadraticCurveTo: 4,
+  BezierCurveTo: 6,
+  Ellipse: 8,
+  Close: 0,
+};
+
+// "Clear=0,FillPath=1,…" and "MoveTo=0:2,…" -> OpCode and PathVerb.
+function defineTables(opCodes, pathVerbs) {
+  const ops = parseTable(opCodes);
+  const verbs = parseTable(pathVerbs);
+
+  const problems = [
+    ...compare("op", Object.keys(ops), HANDLED_OPS),
+    ...compare("path verb", Object.keys(verbs), Object.keys(HANDLED_VERBS)),
+    ...Object.keys(verbs)
+      .filter((n) => n in HANDLED_VERBS && verbs[n].operands !== HANDLED_VERBS[n])
+      .map(
+        (n) =>
+          `path verb ${n} has ${verbs[n].operands} operands in .NET but ${HANDLED_VERBS[n]} in canvas.js`,
+      ),
+  ];
+  if (problems.length) {
+    throw new Error(`Gamewright: canvas.js and .NET disagree. ${problems.join("; ")}.`);
   }
-  ctx.closePath();
-  return i + 2 * n;
+
+  for (const [name, { value }] of Object.entries(ops)) OpCode[name] = value;
+  for (const [name, { value }] of Object.entries(verbs)) PathVerb[name] = value;
 }
 
-// Opcode numbers belong to the Op enum in CommandBuffer.cs. .NET hands them over in init, and init checks that
-// this file and .NET agree on the set of ops, so a mismatch fails at startup instead of mid-frame.
-const OpCode = {};
-const HANDLED = [
-  "Clear",
-  "FillRect",
-  "FillCircle",
-  "FillPolygon",
-  "StrokeRect",
-  "StrokeLine",
-  "StrokeSegments",
-  "StrokePolygon",
-  "DrawText",
-  "DrawImage",
-];
+// "Name=Number[:Operands],…" -> { Name: { value, operands } }
+function parseTable(text) {
+  const table = {};
+  for (const pair of text.split(",")) {
+    const [name, rest] = pair.split("=");
+    const [value, operands] = rest.split(":");
+    table[name] = { value: Number(value), operands: operands === undefined ? undefined : Number(operands) };
+  }
+  return table;
+}
 
-// "Clear=0,Rect=1,…" -> OpCode, verified against HANDLED in both directions.
-function defineOpCodes(table) {
-  const known = {};
-  for (const pair of table.split(",")) {
-    const [name, value] = pair.split("=");
-    known[name] = Number(value);
+function compare(kind, fromDotnet, handled) {
+  const problems = [];
+  const notHandled = fromDotnet.filter((n) => !handled.includes(n));
+  const notDefined = handled.filter((n) => !fromDotnet.includes(n));
+  if (notHandled.length) problems.push(`${kind}s not handled by canvas.js: [${notHandled}]`);
+  if (notDefined.length) problems.push(`${kind}s not defined by .NET: [${notDefined}]`);
+  return problems;
+}
+
+// Reads "n slot…" starting at f[i]: n slots of path verbs, each followed by its operands. Builds the path on ctx
+// and returns the index just past it, so the caller continues with the fixed tail (line width, color).
+function buildPath(f, i) {
+  const end = i + 1 + f[i];
+  i++;
+  ctx.beginPath();
+  while (i < end) {
+    switch (f[i++]) {
+      case PathVerb.MoveTo:
+        ctx.moveTo(f[i], f[i + 1]);
+        i += 2;
+        break;
+      case PathVerb.LineTo:
+        ctx.lineTo(f[i], f[i + 1]);
+        i += 2;
+        break;
+      case PathVerb.QuadraticCurveTo:
+        ctx.quadraticCurveTo(f[i], f[i + 1], f[i + 2], f[i + 3]);
+        i += 4;
+        break;
+      case PathVerb.BezierCurveTo:
+        ctx.bezierCurveTo(f[i], f[i + 1], f[i + 2], f[i + 3], f[i + 4], f[i + 5]);
+        i += 6;
+        break;
+      case PathVerb.Ellipse:
+        // cx cy rx ry rotation startAngle endAngle counterClockwise
+        ctx.ellipse(f[i], f[i + 1], f[i + 2], f[i + 3], f[i + 4], f[i + 5], f[i + 6], f[i + 7] !== 0);
+        i += 8;
+        break;
+      case PathVerb.Close:
+        ctx.closePath();
+        break;
+      default:
+        throw new Error(`Unknown path verb ${f[i - 1]} at ${i - 1}`);
+    }
   }
-  const unhandled = Object.keys(known).filter((n) => !HANDLED.includes(n));
-  const missing = HANDLED.filter((n) => !(n in known));
-  if (unhandled.length || missing.length) {
-    throw new Error(
-      `Gamewright: canvas.js and .NET disagree on opcodes. ` +
-        `Not handled by canvas.js: [${unhandled}]. Not defined by .NET: [${missing}].`,
-    );
-  }
-  Object.assign(OpCode, known);
+  if (i !== end) throw new Error(`Path overran its ${end - i} slots at ${i}`);
+  return end;
 }
 
 export function submit(view) {
@@ -196,26 +249,19 @@ export function submit(view) {
         ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         break;
       }
-      case OpCode.FillRect: {
-        // Rect x y w h rgba
-        const x = f[i++];
-        const y = f[i++];
-        const w = f[i++];
-        const h = f[i++];
+      case OpCode.FillPath: {
+        // FillPath n slot… rgba
+        i = buildPath(f, i);
         ctx.fillStyle = cssColor(u[i++]);
-
-        ctx.fillRect(x, y, w, h);
+        ctx.fill();
         break;
       }
-      case OpCode.FillCircle: {
-        // Circle x y r rgba
-        const x = f[i++],
-          y = f[i++],
-          r = f[i++];
-        ctx.fillStyle = cssColor(u[i++]);
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
+      case OpCode.StrokePath: {
+        // StrokePath n slot… lineWidth rgba
+        i = buildPath(f, i);
+        ctx.lineWidth = f[i++];
+        ctx.strokeStyle = cssColor(u[i++]);
+        ctx.stroke();
         break;
       }
       case OpCode.DrawText: {
@@ -230,32 +276,6 @@ export function submit(view) {
         ctx.textBaseline = "middle";
         // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
         ctx.fillText(s, x, y);
-        break;
-      }
-      case OpCode.StrokeRect: {
-        // StrokeRect x y w h lineWidth rgba
-        const x = f[i++],
-          y = f[i++],
-          w = f[i++],
-          h = f[i++];
-        ctx.lineWidth = f[i++];
-        ctx.strokeStyle = cssColor(u[i++]);
-        ctx.strokeRect(x, y, w, h);
-        break;
-      }
-      case OpCode.StrokeLine: {
-        // Line x1, y1, x2, y2 lineWidth rgba
-        const x1 = f[i++],
-          y1 = f[i++],
-          x2 = f[i++],
-          y2 = f[i++];
-        ctx.lineWidth = f[i++];
-        ctx.strokeStyle = cssColor(u[i++]);
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1); // move to the starting point
-        ctx.lineTo(x2, y2); // draw a line to the end point
-        ctx.stroke();
         break;
       }
       case OpCode.DrawImage: {
@@ -281,37 +301,9 @@ export function submit(view) {
         }
         break;
       }
-      case OpCode.FillPolygon: {
-        // FillPolygon n x0 y0 … x(n-1) y(n-1) rgba
-        i = polygonPath(f, i);
-        ctx.fillStyle = cssColor(u[i++]);
-        ctx.fill();
-        break;
-      }
-      case OpCode.StrokePolygon: {
-        // StrokePolygon n x0 y0 … x(n-1) y(n-1) lineWidth rgba
-        i = polygonPath(f, i);
-        ctx.lineWidth = f[i++];
-        ctx.strokeStyle = cssColor(u[i++]);
-        ctx.stroke();
-        break;
-      }
-      case OpCode.StrokeSegments: {
-        // StrokeSegments n x0 y0 … x(n-1) y(n-1) lineWidth rgba, with n points forming n / 2 separate segments
-        const n = f[i++];
-        ctx.beginPath();
-        for (let k = 0; k < n; k += 2, i += 4) {
-          ctx.moveTo(f[i], f[i + 1]);
-          ctx.lineTo(f[i + 2], f[i + 3]);
-        }
-        ctx.lineWidth = f[i++];
-        ctx.strokeStyle = cssColor(u[i++]);
-        ctx.stroke();
-        break;
-      }
       default:
         console.log(`Unknown opcode ${f[i - 1]} at ${i - 1}`);
-        throw new Error(`Unknown opcode ${c[i - 1]} at ${i - 1}`);
+        throw new Error(`Unknown opcode ${f[i - 1]} at ${i - 1}`);
     }
   }
 }

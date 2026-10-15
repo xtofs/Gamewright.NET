@@ -18,35 +18,83 @@ public sealed class Canvas
 
     public void Clear(Color color)
     {
-        _cmd.AddOpCode(Op.Clear).AddColor(color);
+        _cmd.AddOpCode(OpCode.Clear).AddColor(color);
     }
 
-    public void FillRect(Rect rect, Color color)
-    {
-        _cmd.AddOpCode(Op.FillRect).AddRect(rect).AddColor(color);
-    }
+    // ---- Paths --------------------------------------------------------------------------------
+    // Geometry is always a Path2D: the shape methods below build one in C# (in a reused scratch path) and then
+    // fill or stroke it. Only these two commands carry geometry to JS.
 
-    public void StrokeRect(Rect rect, float lineWidth, Color color)
-    {
-        _cmd.AddOpCode(Op.StrokeRect).AddRect(rect).AddFloat(lineWidth).AddColor(color);
-    }
+    /// <summary>Fills the interior of <paramref name="path"/>.</summary>
+    public void Fill(Path2D path, Color color) =>
+        _cmd.AddOpCode(OpCode.FillPath).AddPath(path).AddColor(color);
+
+    /// <summary>Draws the outline of <paramref name="path"/> with the given line width.</summary>
+    public void Stroke(Path2D path, float lineWidth, Color color) =>
+        _cmd.AddOpCode(OpCode.StrokePath).AddPath(path).AddFloat(lineWidth).AddColor(color);
+
+    readonly Path2D _scratch = new();
+
+    public void FillRect(Rect rect, Color color) => Fill(_scratch.Clear().Rect(rect), color);
+
+    public void StrokeRect(Rect rect, float lineWidth, Color color) =>
+        Stroke(_scratch.Clear().Rect(rect), lineWidth, color);
 
     public void StrokeLine(Point p1, Point p2, float lineWidth, Color color) =>
-        _cmd.AddOpCode(Op.StrokeLine).AddPoint(p1).AddPoint(p2).AddFloat(lineWidth).AddColor(color);
+        Stroke(_scratch.Clear().MoveTo(p1).LineTo(p2), lineWidth, color);
 
     public void StrokeLine(float x1, float y1, float x2, float y2, float lineWidth, Color color) =>
         StrokeLine(new Point(x1, y1), new Point(x2, y2), lineWidth, color);
 
-    public void FillCircle(Point center, float r, Color color)
-        => FillCircle(center.X, center.Y, r, color);
+    public void FillCircle(Point center, float r, Color color) =>
+        Fill(_scratch.Clear().Circle(center, r), color);
 
     public void FillCircle(float x, float y, float r, Color color) =>
-        _cmd.AddOpCode(Op.FillCircle).AddPoint(new Point(x, y)).AddFloat(r).AddColor(color);
+        FillCircle(new Point(x, y), r, color);
+
+    public void StrokeCircle(Point center, float r, float lineWidth, Color color) =>
+        Stroke(_scratch.Clear().Circle(center, r), lineWidth, color);
+
+    public void FillEllipse(Point center, float radiusX, float radiusY, Color color) =>
+        Fill(_scratch.Clear().Oval(center, radiusX, radiusY), color);
+
+    public void StrokeEllipse(Point center, float radiusX, float radiusY, float lineWidth, Color color) =>
+        Stroke(_scratch.Clear().Oval(center, radiusX, radiusY), lineWidth, color);
+
+    /// <summary>Fills the closed polygon through <paramref name="points"/>. Fewer than 3 points draw nothing.</summary>
+    public void FillPolygon(ReadOnlySpan<Point> points, Color color)
+    {
+        if (points.Length >= 3)
+        {
+            Fill(_scratch.Clear().Polygon(points), color);
+        }
+    }
+
+    /// <summary>Strokes the outline of the closed polygon through <paramref name="points"/>. Fewer than 2 points draw nothing.</summary>
+    public void StrokePolygon(ReadOnlySpan<Point> points, float lineWidth, Color color)
+    {
+        if (points.Length >= 2)
+        {
+            Stroke(_scratch.Clear().Polygon(points), lineWidth, color);
+        }
+    }
+
+    /// <summary>
+    /// Strokes many separate line segments as a single path. <paramref name="endpoints"/> holds the segments as
+    /// pairs <c>[a0, b0, a1, b1, …]</c>; a trailing odd point is ignored and fewer than two points draw nothing.
+    /// </summary>
+    public void StrokeSegments(ReadOnlySpan<Point> endpoints, float lineWidth, Color color)
+    {
+        if (endpoints.Length >= 2)
+        {
+            Stroke(_scratch.Clear().Segments(endpoints), lineWidth, color);
+        }
+    }
 
     /// <summary>Centered text. Strings are interned: each distinct string crosses to JS once.
     /// Avoid building a new string every frame (e.g. $"t={time}"), or the table grows unbounded.</summary>
     public void DrawText(string s, Point point, float fontSize, Color color) =>
-        _cmd.AddOpCode(Op.DrawText).AddString(s).AddPoint(point).AddFloat(fontSize).AddColor(color);
+        _cmd.AddOpCode(OpCode.DrawText).AddString(s).AddPoint(point).AddFloat(fontSize).AddColor(color);
 
     // ---- Images -----------------------------------------------------------------------------
     // Loading is asynchronous and happens outside the command stream: LoadImage queues a request that
@@ -106,7 +154,7 @@ public sealed class Canvas
             return;     // still loading (or failed): draw nothing
         }
 
-        _cmd.AddOpCode(Op.DrawImage).AddInt(image.Id).AddRect(source).AddRect(dest)
+        _cmd.AddOpCode(OpCode.DrawImage).AddInt(image.Id).AddRect(source).AddRect(dest)
             .AddFloat(Math.Clamp(alpha, 0f, 1f))
             .AddFloat(pixelated ? 1f : 0f);   // flags: bit 0 = pixelated
     }
@@ -130,49 +178,5 @@ public sealed class Canvas
         {
             PendingImageFrees.Add(image.Id);
         }
-    }
-
-    // ---- Polygons ---------------------------------------------------------------------------
-    // Variable-length commands: the point count comes right after the opcode, so the JS side knows
-    // how many operands to consume before it reaches the fixed tail (line width, color).
-    //   FillPolygon    n x0 y0 … x(n-1) y(n-1) rgba
-    //   StrokePolygon  n x0 y0 … x(n-1) y(n-1) lineWidth rgba
-    //   StrokeSegments n x0 y0 … x(n-1) y(n-1) lineWidth rgba   (n points = n / 2 separate segments)
-
-    /// <summary>Fills the closed polygon through <paramref name="points"/>. Fewer than 3 points draw nothing.</summary>
-    public void FillPolygon(ReadOnlySpan<Point> points, Color color)
-    {
-        if (points.Length < 3)
-        {
-            return;
-        }
-
-        _cmd.AddOpCode(Op.FillPolygon).AddPoints(points).AddColor(color);
-    }
-
-    /// <summary>Strokes the outline of the closed polygon through <paramref name="points"/>. Fewer than 2 points draw nothing.</summary>
-    public void StrokePolygon(ReadOnlySpan<Point> points, float lineWidth, Color color)
-    {
-        if (points.Length < 2)
-        {
-            return;
-        }
-
-        _cmd.AddOpCode(Op.StrokePolygon).AddPoints(points).AddFloat(lineWidth).AddColor(color);
-    }
-
-    /// <summary>
-    /// Strokes many separate line segments as a single path. <paramref name="endpoints"/> holds the segments as
-    /// pairs <c>[a0, b0, a1, b1, …]</c>; a trailing odd point is ignored and fewer than two points draw nothing.
-    /// </summary>
-    public void StrokeSegments(ReadOnlySpan<Point> endpoints, float lineWidth, Color color)
-    {
-        endpoints = endpoints[..(endpoints.Length & ~1)];
-        if (endpoints.Length == 0)
-        {
-            return;
-        }
-
-        _cmd.AddOpCode(Op.StrokeSegments).AddPoints(endpoints).AddFloat(lineWidth).AddColor(color);
     }
 }

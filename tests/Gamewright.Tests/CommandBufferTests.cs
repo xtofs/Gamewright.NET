@@ -10,8 +10,27 @@ public class CommandBufferTests
     public void AddsSlotsInOrder()
     {
         var buffer = new CommandBuffer();
-        buffer.AddOpCode(Op.StrokeLine).AddFloat(1.5f).AddInt(7).AddPoint(new Point(2, 3)).AddRect(new Rect(4, 5, 6, 8));
-        Assert.Equal([(float)Op.StrokeLine, 1.5f, 7f, 2f, 3f, 4f, 5f, 6f, 8f], buffer.Span.ToArray());
+        buffer.AddOpCode(OpCode.StrokePath).AddFloat(1.5f).AddInt(7).AddPoint(new Point(2, 3)).AddRect(new Rect(4, 5, 6, 8));
+        Assert.Equal([(float)OpCode.StrokePath, 1.5f, 7f, 2f, 3f, 4f, 5f, 6f, 8f], buffer.Span.ToArray());
+    }
+
+    [Fact]
+    public void AddPath_WritesSlotCountThenSlots()
+    {
+        var buffer = new CommandBuffer();
+        buffer.AddPath(new Path2D().MoveTo(new Point(1, 2)).Close());
+        Assert.Equal([4f, (float)PathVerb.MoveTo, 1f, 2f, (float)PathVerb.Close], buffer.Span.ToArray());
+    }
+
+    [Fact]
+    public void AddPath_LargerThanCapacity()
+    {
+        var path = new Path2D();
+        for (var i = 0; i < 3_000; i++) { path.LineTo(new Point(i, i)); }
+        var buffer = new CommandBuffer();
+        buffer.AddPath(path);
+        Assert.Equal(1 + 3_000 * 3, buffer.Span.Length);
+        Assert.Equal(9_000f, buffer.Span[0]);
     }
 
     [Fact]
@@ -85,8 +104,8 @@ public class CommandBufferTests
     public void OpCodeTable_ListsEveryOpWithItsNumber()
     {
         var table = CommandBuffer.OpCodeTable.Split(',').Select(p => p.Split('=')).ToDictionary(p => p[0], p => int.Parse(p[1]));
-        Assert.Equal(Enum.GetValues<Op>().Length, table.Count);
+        Assert.Equal(Enum.GetValues<OpCode>().Length, table.Count);
         Assert.Equal(table.Count, table.Values.Distinct().Count());
-        Assert.All(Enum.GetValues<Op>(), op => Assert.Equal((int)op, table[op.ToString()]));
+        Assert.All(Enum.GetValues<OpCode>(), op => Assert.Equal((int)op, table[op.ToString()]));
     }
 }
