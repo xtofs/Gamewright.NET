@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
-
 namespace Gamewright.Primitives;
+
+using System.Runtime.InteropServices;
 
 /// <summary>A two-dimensional extent: width <paramref name="W"/> and height <paramref name="H"/>.</summary>
 [StructLayout(LayoutKind.Sequential)]

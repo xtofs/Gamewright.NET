@@ -1,7 +1,3 @@
-
-
-using Gamewright.Layout;
-
 namespace Gamewright;
 
 /// <summary>An image divided into a regular grid of equally sized cells, addressed by column and row.</summary>

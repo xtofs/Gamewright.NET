@@ -1,7 +1,7 @@
-using Gamewright;
-using Gamewright.Layout;
-
 namespace Havannah;
+
+using Gamewright;
+
 
 /// <summary>
 /// The application: plain state plus a RenderFrame method. No components,  no StateHasChanged.

@@ -1,6 +1,6 @@
-using System.Text;
-
 namespace Gamewright.Primitives;
+
+using System.Text;
 
 public static class BijectiveBase26
 {

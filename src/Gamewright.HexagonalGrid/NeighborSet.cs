@@ -1,6 +1,6 @@
-using System.Numerics;
-
 namespace Gamewright.HexagonalGrid;
+
+using System.Numerics;
 
 
 

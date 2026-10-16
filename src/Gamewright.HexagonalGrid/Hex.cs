@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Gamewright.HexagonalGrid;
 
 public readonly record struct Hex

@@ -1,6 +1,6 @@
-using Gamewright.SquareGrid;
-
 namespace Gamewright.Layout;
+
+using Gamewright.SquareGrid;
 
 /// <summary>
 /// Layout leaf for a board of squares with a label border. It takes part in layout as a

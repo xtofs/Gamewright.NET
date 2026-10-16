@@ -1,6 +1,6 @@
-using System.Globalization;
-
 namespace Gamewright.Tests;
+
+using System.Globalization;
 
 /// <summary>Turns the raw command stream and path slots into readable text, so tests can assert on what is drawn.</summary>
 static class StreamDescription

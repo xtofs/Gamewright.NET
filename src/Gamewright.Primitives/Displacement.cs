@@ -1,7 +1,7 @@
+namespace Gamewright.Primitives;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
-
-namespace Gamewright.Primitives;
 
 /// <summary>
 /// A displacement ("how far, in which direction"): the difference between two <see cref="Point"/>s.

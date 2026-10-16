@@ -1,6 +1,6 @@
-using Gamewright.Layout;
-
 namespace Havannah;
+
+using Gamewright.Layout;
 
 /// <summary>
 /// Layout leaf for a Havannah board. It takes part in layout as a single rectangle;

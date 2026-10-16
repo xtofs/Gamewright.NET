@@ -1,7 +1,7 @@
+namespace Gamewright.Primitives;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
-
-namespace Gamewright.Primitives;
 
 /// <summary>
 /// A position ("where"). Two sequential floats (X, Y), so a span of points can be copied to the command

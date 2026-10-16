@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
-
 namespace Gamewright.Primitives.Tests;
+
+using System.Runtime.InteropServices;
 
 public class LayoutTests
 {

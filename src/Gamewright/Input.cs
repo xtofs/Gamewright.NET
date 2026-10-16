@@ -1,5 +1,3 @@
-using Gamewright.Layout;
-
 namespace Gamewright;
 
 /// <summary>Snapshot of input for one frame. Layout mirrors the Float32Array in canvas.js.</summary>

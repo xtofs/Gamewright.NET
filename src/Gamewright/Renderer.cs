@@ -1,7 +1,7 @@
+namespace Gamewright;
+
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
-
-namespace Gamewright;
 
 /// <summary>Owns the frame callback: input in, commands out, nothing retained in JS.</summary>
 public sealed class Renderer

@@ -1,7 +1,7 @@
+namespace Gamewright.Primitives;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
-
-namespace Gamewright.Primitives;
 
 [StructLayout(LayoutKind.Sequential)]
 public readonly record struct Color(byte R, byte G, byte B, byte A = 0xFF)

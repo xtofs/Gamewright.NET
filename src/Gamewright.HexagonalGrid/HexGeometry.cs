@@ -1,9 +1,8 @@
+namespace Gamewright.HexagonalGrid;
+
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
-
-namespace Gamewright.HexagonalGrid;
 
 /// <summary>
 /// Provides geometric functions for working with hexagonal grids, such as calculating the positions of hexagon vertices and centers.

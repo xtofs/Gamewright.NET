@@ -1,7 +1,7 @@
+namespace Gamewright.Primitives;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
-
-namespace Gamewright.Primitives;
 
 
 /// <summary>Four sequential floats (X, Y, W, H), so it can be copied to the command buffer as raw floats.</summary>

@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices.JavaScript;
-
 namespace Gamewright;
+
+using System.Runtime.InteropServices.JavaScript;
 
 /// <summary>
 /// [JSImport] bindings to wwwroot/js/canvas.js. Generated marshalling, no IJSRuntime.

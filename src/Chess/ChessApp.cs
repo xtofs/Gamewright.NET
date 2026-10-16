@@ -1,8 +1,8 @@
+namespace Chess;
+
 using Gamewright;
 using Gamewright.Layout;
 using Gamewright.SquareGrid;
-
-namespace Chess;
 
 /// <summary>
 /// The application: plain state plus a Frame method. No components,  no StateHasChanged.

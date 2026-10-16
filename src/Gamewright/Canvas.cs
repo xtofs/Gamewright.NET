@@ -1,7 +1,4 @@
 namespace Gamewright;
-
-using Gamewright.Layout;
-
 /// <summary>
 /// Immediate-mode drawing surface: each call appends a command to the frame's <see cref="CommandBuffer"/>,
 /// which the Renderer submits to canvas.js once per frame.

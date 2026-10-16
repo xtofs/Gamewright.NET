@@ -1,6 +1,6 @@
-using Gamewright.SquareGrid;
-
 namespace Gamewright;
+
+using Gamewright.SquareGrid;
 
 public static class SquareBoardCanvasExtensions
 {
