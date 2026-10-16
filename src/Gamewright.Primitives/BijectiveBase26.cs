@@ -7,9 +7,11 @@ public static class BijectiveBase26
     // 1 -> "a", 26 -> "z", 27 -> "aa", 702 -> "zz", 703 -> "aaa"
     public static string Encode(long n)
     {
-        // if (n < 1) throw new ArgumentOutOfRangeException(nameof(n), "Must be >= 1.");
+#if DEBUG
+        if (n < 1) throw new ArgumentOutOfRangeException(nameof(n), "Must be >= 1.");
+#else
         if (n < 1) return "?";
-
+#endif
         var sb = new StringBuilder();
         while (n > 0)
         {

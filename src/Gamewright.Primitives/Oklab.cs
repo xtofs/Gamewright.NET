@@ -1,9 +1,5 @@
 namespace Gamewright.Primitives;
 
-// using System;
-
-// // Adapt to your own RGBA type; only the constructor call in FromOkLab depends on it.
-// public readonly record struct Rgba(byte R, byte G, byte B, byte A);
 
 /// <summary>
 /// Provides methods for converting between OKLab and sRGB color spaces, as well as utility functions for working with OKLab colors.
