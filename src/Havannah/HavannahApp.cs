@@ -8,7 +8,7 @@ using Gamewright;
 /// </summary>
 public sealed class HavannahApp : IImmediateApp
 {
-    private readonly HavannahGame _game;
+    private HavannahGame _game;
 
     private readonly HexBoardNode _board;
 
@@ -19,10 +19,20 @@ public sealed class HavannahApp : IImmediateApp
 
     private SpriteAtlas<HavannahPiece> _pieces = default!; // Sprite atlas for game pieces loaded in LoadResources
 
+    public event Action? UiStateChanged;
+
+    public string StatusText => $"{_game.ActivePlayer} to play";
+
     public HavannahApp()
     {
         _game = new HavannahGame(radius: 8);
         _board = new HexBoardNode { Radius = _game.Radius, Margin = 15 };
+    }
+
+    public void StartNewGame()
+    {
+        _game = new HavannahGame(_game.Radius);
+        UiStateChanged?.Invoke();
     }
 
 
@@ -56,6 +66,7 @@ public sealed class HavannahApp : IImmediateApp
             if (geo.TryGetHex(pointer, out var clicked) && _game[clicked] == null)
             {
                 _game.Play(clicked);
+                UiStateChanged?.Invoke();
             }
         }
 

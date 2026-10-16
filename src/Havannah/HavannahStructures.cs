@@ -2,7 +2,6 @@ namespace Havannah;
 
 public static class HavannahStructures
 {
-    // public Region<T> FindRegion<T>(HexGrid<T> grid, int index) where T : struct
     public static Region<T> FindRegion<T>(HexGrid<T> grid, Hex hex) where T : struct
     {
         if (!grid.TryGet(hex, out var group))

@@ -4,11 +4,24 @@
 
 <PageTitle>Havannah Canvas</PageTitle>
 
+<aside class="left">
+  <h1>Havannah</h1>
+  <p>@_app.StatusText</p>
+  <button type="button" @onclick="StartNewGame">New game</button>
+</aside>
+
 @* Blazor renders this once; after that the JS frame loop drives everything. *@
 <canvas id="surface" tabindex="0"></canvas>
 
 @code {
-  readonly Renderer _renderer = new Renderer(new HavannahApp());
+  readonly HavannahApp _app = new();
+  readonly Renderer _renderer;
+
+  public Home()
+  {
+    _renderer = new Renderer(_app);
+    _app.UiStateChanged += OnUiStateChanged;
+  }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -16,5 +29,13 @@
       await _renderer.StartAsync("surface");
   }
 
-  public void Dispose() => _renderer.Stop();
+  void StartNewGame() => _app.StartNewGame();
+
+  void OnUiStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+  public void Dispose()
+  {
+    _app.UiStateChanged -= OnUiStateChanged;
+    _renderer.Stop();
+  }
 }
