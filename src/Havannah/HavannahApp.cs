@@ -14,8 +14,9 @@ public sealed class HavannahApp : IImmediateApp
 
 
     private static readonly Color BoardBackground = new(0x20, 0x20, 0x20);
-    private static readonly Color CellOutline = BoardBackground;
-    private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.59987f, s: 0.013f);
+    private static readonly Color CellOutline = Colors.SkyBlue;
+    private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.39987f, s: 0.013f);
+    // private static readonly Color[] CellColors = Oklab.GrayTetrahedron(centerL: 0.59987f, s: 0.013f);
 
     private SpriteAtlas<HavannahPiece> _pieces = default!; // Sprite atlas for game pieces loaded in LoadResources
 

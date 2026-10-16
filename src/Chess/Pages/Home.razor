@@ -2,13 +2,32 @@
 @using Gamewright
 @implements IDisposable
 
-<PageTitle>Chess Canvas</PageTitle>
+<PageTitle>Chess</PageTitle>
+
+<aside class="left">
+  <h1>Chess</h1>
+  <p>@_app.StatusText</p>
+  <button type="button" @onclick="StartNewGame">New game</button>
+</aside>
 
 @* Blazor renders this once; after that the JS frame loop drives everything. *@
 <canvas id="surface" tabindex="0"></canvas>
 
 @code {
-  readonly Renderer _renderer = new Renderer(new ChessApp());
+  readonly ChessApp _app;
+
+  readonly Renderer _renderer;
+
+  public Home()
+  {
+    _app = new ChessApp();
+    _app.UiStateChanged += OnUiStateChanged;
+
+    _renderer = new Renderer(_app);
+  }
+  void OnUiStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+  void StartNewGame() => _app.StartNewGame();
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {

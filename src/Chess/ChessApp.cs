@@ -13,18 +13,20 @@ public sealed class ChessApp : IImmediateApp
 
     private readonly SquareBoardNode _board;
 
+    public event Action? UiStateChanged;
+
+    public string StatusText => $"{_chessGame.ActivePlayer.Name} to play";
+
     /// <summary>Selected square in board coordinates (column 0 = file a, row 0 = rank 1).</summary>
     private Square? _selectedSquare;
 
-    // Canvas.Text interns strings, so build every label once instead of once per frame.
+    private SpriteAtlas<ChessPiece> _pieces = null!;   // created in LoadResources, before the first frame
 
     public ChessApp()
     {
         _chessGame = new ChessGame();
         _board = new SquareBoardNode { Columns = ChessGame.Files, Rows = ChessGame.Ranks, Margin = 5 };
     }
-
-    private SpriteAtlas<ChessPiece> _pieces = null!;   // created in LoadResources, before the first frame
 
     public void LoadResources(ResourceLoader resources)
     {
@@ -41,10 +43,12 @@ public sealed class ChessApp : IImmediateApp
         if (io.PrimaryPressed && geo.TryGetSquare(pointer, out var clicked))
         {
             OnSquareClicked(clicked);
+            UiStateChanged?.Invoke();
         }
         else if (io.PrimaryPressed)
         {
             _board.Flipped = !_board.Flipped;
+            UiStateChanged?.Invoke();
         }
 
         // ── Draw ──
@@ -69,9 +73,9 @@ public sealed class ChessApp : IImmediateApp
             }
         }
 
-        // Pointer follower.
-        var pos = pointer.Clamp(io.Rect);
-        canvas.FillCircle(pos.X, pos.Y, 8, new Color(0x4F, 0xC3, 0xF7, 0xFF));
+        // // Pointer follower.
+        // var pos = pointer.Clamp(io.Rect);
+        // canvas.FillCircle(pos.X, pos.Y, 8, new Color(0x4F, 0xC3, 0xF7, 0xFF));
     }
 
     /// <summary>First click selects a square; the second click moves the selected piece there (or just deselects).</summary>
@@ -82,6 +86,7 @@ public sealed class ChessApp : IImmediateApp
             if (_chessGame[ToGame(selected)] != null && square != selected)
             {
                 _chessGame.Move(ToGame(selected), ToGame(square));
+                UiStateChanged?.Invoke();
             }
             _selectedSquare = null;
         }
@@ -112,5 +117,11 @@ public sealed class ChessApp : IImmediateApp
             ChessPiece.BlackPawn => (5, 1),
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, null)
         };
+    }
+
+    internal void StartNewGame()
+    {
+        _chessGame.Reset();
+        UiStateChanged?.Invoke();
     }
 }
