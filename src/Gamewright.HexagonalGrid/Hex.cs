@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace Gamewright.HexagonalGrid;
 
 public readonly record struct Hex
@@ -11,7 +13,7 @@ public readonly record struct Hex
     /// The index is stable and grows from the center of the grid outward 
     /// and around each ring in a clockwise manner.
     /// </summary>
-    public int Index { get; }
+    public int Index => HexMath.IndexFromHex(Q, R, S);
 
     /// <summary>
     /// One of the three color classes (0,1,2) of the hexagon based on its cube coordinates.
@@ -28,7 +30,6 @@ public readonly record struct Hex
         Q = q;
         R = r;
         // S is derived from Q and R to maintain the invariant Q + R + S = 0
-        Index = HexMath.IndexFromCubeCoord(q, r, s);
     }
 
     public static Hex FromIndex(int index)

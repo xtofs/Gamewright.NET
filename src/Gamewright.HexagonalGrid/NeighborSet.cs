@@ -1,21 +1,11 @@
+using System.Numerics;
+
 namespace Gamewright.HexagonalGrid;
 
 
-/// <summary>
-/// bitset for the neighboring hex cells in a pointy-top hexagonal grid
-/// </summary>
-[Flags]
-public enum NeighborSet
-{
-    OneOClock = 1 << HexNeighbor.OneOClock,
-    ThreeOClock = 1 << HexNeighbor.ThreeOClock,
-    FiveOClock = 1 << HexNeighbor.FiveOClock,
-    SevenOClock = 1 << HexNeighbor.SevenOClock,
-    NineOClock = 1 << HexNeighbor.NineOClock,
-    ElevenOClock = 1 << HexNeighbor.ElevenOClock,
-}
 
-public enum HexNeighbor
+
+public enum Neighbor
 {
     OneOClock,
     ThreeOClock,
@@ -25,42 +15,69 @@ public enum HexNeighbor
     ElevenOClock
 }
 
+/// <summary>
+/// bitset for the neighboring hex cells in a pointy-top hexagonal grid
+/// </summary>
+[Flags]
+public enum NeighborSet
+{
+    OneOClock = 1 << Neighbor.OneOClock,
+    ThreeOClock = 1 << Neighbor.ThreeOClock,
+    FiveOClock = 1 << Neighbor.FiveOClock,
+    SevenOClock = 1 << Neighbor.SevenOClock,
+    NineOClock = 1 << Neighbor.NineOClock,
+    ElevenOClock = 1 << Neighbor.ElevenOClock,
+}
+
 public static class NeighborSetExtensions
 {
-    extension(HexNeighbor)
+    private const NeighborSet AllNeighbors =
+        NeighborSet.OneOClock |
+        NeighborSet.ThreeOClock |
+        NeighborSet.FiveOClock |
+        NeighborSet.SevenOClock |
+        NeighborSet.NineOClock |
+        NeighborSet.ElevenOClock;
+
+    extension(Neighbor)
     {
-        public static IReadOnlyList<HexNeighbor> All =>
+        public static IReadOnlyList<Neighbor> All =>
         [
-            HexNeighbor.OneOClock,
-            HexNeighbor.ThreeOClock,
-            HexNeighbor.FiveOClock,
-            HexNeighbor.SevenOClock,
-            HexNeighbor.NineOClock,
-            HexNeighbor.ElevenOClock
+            Neighbor.OneOClock,
+            Neighbor.ThreeOClock,
+            Neighbor.FiveOClock,
+            Neighbor.SevenOClock,
+            Neighbor.NineOClock,
+            Neighbor.ElevenOClock
         ];
     }
 
-    extension(HexNeighbor neighbor)
+    extension(NeighborSet)
+    {
+        public static NeighborSet AllDirections => AllNeighbors;
+    }
+
+    extension(Neighbor neighbor)
     {
         public NeighborSet ToSingletonSet() => (NeighborSet)(1 << (int)neighbor);
 
         public HexOffset Direction => neighbor switch
         {
-            HexNeighbor.OneOClock => new HexOffset(1, -1, 0),
-            HexNeighbor.ThreeOClock => new HexOffset(1, 0, -1),
-            HexNeighbor.FiveOClock => new HexOffset(0, 1, -1),
-            HexNeighbor.SevenOClock => new HexOffset(-1, 1, 0),
-            HexNeighbor.NineOClock => new HexOffset(-1, 0, 1),
-            HexNeighbor.ElevenOClock => new HexOffset(0, -1, 1),
+            Neighbor.OneOClock => new HexOffset(1, -1, 0),
+            Neighbor.ThreeOClock => new HexOffset(1, 0, -1),
+            Neighbor.FiveOClock => new HexOffset(0, 1, -1),
+            Neighbor.SevenOClock => new HexOffset(-1, 1, 0),
+            Neighbor.NineOClock => new HexOffset(-1, 0, 1),
+            Neighbor.ElevenOClock => new HexOffset(0, -1, 1),
             _ => throw new ArgumentOutOfRangeException(nameof(neighbor), "Invalid hex neighbor")
         };
     }
 
     extension(NeighborSet set)
     {
-        public bool Has(HexNeighbor neighbor) => (set & neighbor.ToSingletonSet()) == neighbor.ToSingletonSet();
+        public bool Has(Neighbor neighbor) => (set & neighbor.ToSingletonSet()) == neighbor.ToSingletonSet();
 
-        public NeighborSet Inverse => ~set & (NeighborSet.OneOClock | NeighborSet.ThreeOClock | NeighborSet.FiveOClock | NeighborSet.SevenOClock | NeighborSet.NineOClock | NeighborSet.ElevenOClock);
+        public NeighborSet Inverse => ~set & AllNeighbors;
 
 
         public bool TryGetCorner(out GridCorner corner)
@@ -91,12 +108,22 @@ public static class NeighborSetExtensions
             }
         }
 
-        public NeighborSet Add(HexNeighbor neighbor) => set | neighbor.ToSingletonSet();
+        public NeighborSet Add(Neighbor neighbor) => set | neighbor.ToSingletonSet();
 
-        public NeighborSet Remove(HexNeighbor neighbor) => set & ~neighbor.ToSingletonSet();
+        public NeighborSet Remove(Neighbor neighbor) => set & ~neighbor.ToSingletonSet();
 
+        public bool TryGetNext(out Neighbor neighbor)
+        {
+            var remaining = (int)(set & AllNeighbors);
+            if (remaining == 0)
+            {
+                neighbor = default;
+                return false;
+            }
+
+            neighbor = (Neighbor)BitOperations.TrailingZeroCount((uint)remaining);
+            return true;
+        }
 
     }
 }
-
-

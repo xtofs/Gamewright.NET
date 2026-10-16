@@ -70,7 +70,7 @@ C# never calls the canvas directly. During a frame it appends commands (an opcod
 `canvas.js` replays it onto the 2D context. (`CommandBuffer.cs` is the C# side of this; this section is about the
 mechanism, not that type.)
 
-**Pros**
+### **Pros**
 
 - **One interop crossing per frame.** A call across the .NET/JS boundary is the expensive part in WebAssembly.
   The board in Havannah alone is hundreds of primitives per frame; calling the canvas once per primitive would
@@ -89,7 +89,7 @@ mechanism, not that type.)
   `Path2D` built in C#, as in Canvas2D, so JS only needs two shape commands (fill a path, stroke a path) and a
   new shape (ellipse, rounded rectangle, …) needs no JS at all.
 
-**Cons**
+### **Cons**
 
 - **The protocol is untyped and positional.** An operand missing or added on one side shifts every command
   after it, and the symptom is garbled drawing far from the cause. The layout of each command is still written

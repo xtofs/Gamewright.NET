@@ -233,16 +233,41 @@ public class HexGrid<T> where T : struct
 
     public bool Contains(Hex hex) => HexMath.IsOnBoard(hex, Radius);
 
-    internal IEnumerable<Hex> Neighbors(Hex hex)
+    internal NeighborEnumerator Neighbors(Hex hex) => new NeighborEnumerator(Radius, hex);
+
+    internal ref struct NeighborEnumerator //  structurally a : IEnumerator<Hex>, IEnumerable<Hex> but won't ever be used boxed
     {
-        foreach (var n in HexNeighbor.All)
+        private readonly int _radius;
+        private readonly Hex _hex;
+        private NeighborSet _remainingNeighbors;
+
+        internal NeighborEnumerator(int radius, Hex hex)
         {
-            var dir = n.Direction;
-            var neighbor = hex + dir;
-            if (Contains(neighbor))
+            _radius = radius;
+            _hex = hex;
+            _remainingNeighbors = NeighborSet.AllDirections;
+            Current = default;
+        }
+
+        public Hex Current { get; private set; }
+
+        public readonly NeighborEnumerator GetEnumerator() => this;
+
+        public bool MoveNext()
+        {
+            while (_remainingNeighbors.TryGetNext(out var neighbor))
             {
-                yield return neighbor;
+                _remainingNeighbors = _remainingNeighbors.Remove(neighbor);
+
+                var neighborHex = _hex + neighbor.Direction;
+                if (HexMath.IsOnBoard(neighborHex, _radius))
+                {
+                    Current = neighborHex;
+                    return true;
+                }
             }
+
+            return false;
         }
     }
 }

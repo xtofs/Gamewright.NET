@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 
 namespace Gamewright.HexagonalGrid;
 
@@ -41,40 +42,6 @@ public static class HexMath
         return Math.Max(Math.Abs(q), Math.Max(Math.Abs(r), Math.Abs(s)));
     }
 
-    /// <summary>
-    /// calculates the index of a hexagon in the hexagonal grid based on its cube coordinates.
-    /// The index is stable and grows from the center of the grid outward and around each ring in a clockwise manner.
-    /// </summary>
-    /// <param name="q"></param>
-    /// <param name="r"></param>
-    /// <param name="s"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidDataException"></exception>
-    public static int IndexFromCubeCoord(int q, int r, int s)
-    {
-        var k = RingOfCube(q, r, s);
-
-        // determine grid edge "index" and offset along the edge
-        // edge are numbered clockwise starting with the edge that starts on the top right
-        // and the last hex on the edge is excluded because it is the first hex of the next edge
-        if (k == 0) { return 0; }
-
-        // determine which edge of the ring the hexagon is on 
-        // and its offset along that edge
-        var (e, t) = 0 switch
-        {
-            _ when q == +k && r != 0 => (0, -s),
-            _ when s == -k && q != 0 => (1, r),
-            _ when r == +k && s != 0 => (2, -q),
-            _ when q == -k && r != 0 => (3, s),
-            _ when s == +k && q != 0 => (4, -r),
-            _ when r == -k && s != 0 => (5, q),
-            _ => throw new InvalidDataException($"Internal error: mismatch of cube coordinate {(q, r, s)} and calculated ring {k}")
-        };
-
-        return 1 + 3 * k * (k - 1) + e * k + t;
-    }
-
     public static int RingOfIndex(int ix)
     {
         if (ix == 0) { return 0; }
@@ -83,6 +50,7 @@ public static class HexMath
         var r = (int)Math.Sqrt(n);
         return (3 + r) / 6;
     }
+
     public static Hex HexFromIndex(int ix)
     {
         HexFromIndex(ix, out int q, out int r, out int s);
@@ -112,6 +80,42 @@ public static class HexMath
             // default: throw new InvalidDataException();
             default: q = 0; r = 0; s = 0; break;
         }
+    }
+
+    public static int IndexFromHex(Hex hex) => IndexFromHex(hex.Q, hex.R, hex.S);
+
+    /// <summary>
+    /// calculates the index of a hexagon in the hexagonal grid based on its cube coordinates.
+    /// The index is stable and grows from the center of the grid outward and around each ring in a clockwise manner.
+    /// </summary>
+    /// <param name="q"></param>
+    /// <param name="r"></param>
+    /// <param name="s"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidDataException"></exception>
+    public static int IndexFromHex(int q, int r, int s)
+    {
+        var k = RingOfCube(q, r, s);
+
+        // determine grid edge "index" and offset along the edge
+        // edge are numbered clockwise starting with the edge that starts on the top right
+        // and the last hex on the edge is excluded because it is the first hex of the next edge
+        if (k == 0) { return 0; }
+
+        // determine which edge of the ring the hexagon is on 
+        // and its offset along that edge
+        var (e, t) = 0 switch
+        {
+            _ when q == +k && r != 0 => (0, -s),
+            _ when s == -k && q != 0 => (1, +r),
+            _ when r == +k && s != 0 => (2, -q),
+            _ when q == -k && r != 0 => (3, +s),
+            _ when s == +k && q != 0 => (4, -r),
+            _ when r == -k && s != 0 => (5, +q),
+            _ => throw new InvalidDataException($"Internal error: mismatch of cube coordinate {(q, r, s)} and calculated ring {k}")
+        };
+
+        return 1 + 3 * k * (k - 1) + e * k + t;
     }
 
     /// <summary>
@@ -148,107 +152,18 @@ public static class HexMath
         }
     }
 
-
-    public static NeighborSet CreateNeighborSet(Hex hex, int radius)
+    public static NeighborSet CreateNeighborSet(Hex hex, int boardRadius)
     {
         var neighbors = new NeighborSet();
-        foreach (var neighbor in HexNeighbor.All)
+        foreach (var neighbor in Neighbor.All)
         {
             var neighborHex = hex + neighbor.Direction;
-            if (HexMath.IsOnBoard(neighborHex, radius)) { neighbors = neighbors.Add(neighbor); }
+            if (HexMath.IsOnBoard(neighborHex, boardRadius)) { neighbors = neighbors.Add(neighbor); }
         }
 
         return neighbors;
     }
 
-    // /// <summary>
-    // /// Determines if the hexagon is a grid corner of the grid with the given radius.
-    // /// </summary>
-    // /// <param name="radius"></param>
-    // /// <param name="corner"></param>
-    // /// <returns></returns>
-    // public static bool IsCorner(Hex hex, int radius, [MaybeNullWhen(false)] out GridCorner corner)
-    // {
-    //     // corners are determined by which components have 
-    //     // absolute value equal to the radius and their signs.
-    //     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
-    //     // convert the coordinates to -1, 0, or 1 based on whether they are on the radius boundary
-    //     // this allows to compare to constants in the switch statement below.
-    //     var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
-    //     var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
-    //     var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
-    //     // for corners, and only for corners, q, r, s is not a permutation of 1, 0, -1 
-
-    //     switch (q, r, s)
-    //     {
-    //         case (-1, 0, 1):
-    //             corner = GridCorner.NorthWest;
-    //             return true;
-    //         case (0, -1, 1):
-    //             corner = GridCorner.NorthEast;
-    //             return true;
-    //         case (1, -1, 0):
-    //             corner = GridCorner.East;
-    //             return true;
-    //         case (1, 0, -1):
-    //             corner = GridCorner.SouthEast;
-    //             return true;
-    //         case (0, 1, -1):
-    //             corner = GridCorner.SouthWest;
-    //             return true;
-    //         case (-1, 1, 0):
-    //             corner = GridCorner.West;
-    //             return true;
-    //         default:
-    //             corner = (GridCorner)(-1);
-    //             return false;
-    //     }
-    // }
-
-
-    // /// <summary>
-    // /// Determines if the hexagon is on an edge of the hexagonal grid with the given radius.
-    // /// Returns true if the hexagon is on an edge of the grid, and sets the corresponding edge direction.
-    // /// </summary>
-    // /// <param name="radius"></param>
-    // /// <param name="edge"></param>
-    // /// <returns></returns>
-    // public static bool IsEdge(Hex hex, int radius, [MaybeNullWhen(false)] out GridEdge edge)
-    // {
-    //     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(radius);
-    //     // the edge is determined by the sign of the component that has 
-    //     // the absolute value equal to the radius.
-
-    //     var q = Math.Abs(hex.Q) == radius ? Math.Sign(hex.Q) : 0;
-    //     var r = Math.Abs(hex.R) == radius ? Math.Sign(hex.R) : 0;
-    //     var s = Math.Abs(hex.S) == radius ? Math.Sign(hex.S) : 0;
-    //     switch (q, r, s)
-    //     {
-    //         case (-1, 0, 0):
-    //             edge = GridEdge.NorthWest;
-    //             return true;
-    //         case (1, 0, 0):
-    //             edge = GridEdge.SouthEast;
-    //             return true;
-    //         case (0, -1, 0):
-    //             edge = GridEdge.NorthEast;
-    //             return true;
-    //         case (0, 1, 0):
-    //             edge = GridEdge.SouthWest;
-    //             return true;
-    //         case (0, 0, 1):
-    //             edge = GridEdge.North;
-    //             return true;
-    //         case (0, 0, -1):
-    //             edge = GridEdge.South;
-    //             return true;
-    //         default:
-    //             edge = (GridEdge)(-1);
-    //             return false;
-    //     }
-    // }
-
     /// <summary>True when <paramref name="hex"/> lies on a board of the given radius (see <see cref="HexagonCount"/>).</summary>
-    public static bool IsOnBoard(Hex hex, int radius) => RingOfCube(hex) < radius;
-
+    public static bool IsOnBoard(Hex hex, int boardRadius) => RingOfCube(hex) < boardRadius;
 }

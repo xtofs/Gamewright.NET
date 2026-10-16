@@ -126,7 +126,19 @@ public static class HavannahStructures
         var enclosed = GridHexes(grid).Where(h => !isMember[h.Index] && !outside[h.Index]).ToArray();
         if (enclosed.Length == 0) { return null; }
 
-        var boundary = enclosed.SelectMany(grid.Neighbors).Where(h => isMember[h.Index]).Distinct().ToList();
+        var boundary = new List<Hex>();
+        var seen = new HashSet<Hex>();
+        foreach (var hex in enclosed)
+        {
+            foreach (var neighbor in grid.Neighbors(hex))
+            {
+                if (isMember[neighbor.Index] && seen.Add(neighbor))
+                {
+                    boundary.Add(neighbor);
+                }
+            }
+        }
+
         return new Win<T>(WinKind.Ring, region.Group, boundary);
     }
 
